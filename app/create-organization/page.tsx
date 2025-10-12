@@ -207,14 +207,17 @@ export default function CreateOrganization() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h4 className="text-xl font-semibold text-black">{org.name}</h4>
-                            <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">
-                              {org.serviceType || 'Sin tipo'}
+                            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                              NIT: {org.nit}
                             </span>
                           </div>
-                          <p className="text-gray-800 mb-3">{org.description || 'Sin descripción'}</p>
+                          <div className="text-gray-800 mb-3">
+                            {org.address && <p>📍 {org.address}</p>}
+                            {org.phone && <p>📞 {org.phone}</p>}
+                          </div>
                           <div className="flex items-center gap-4 text-sm text-gray-700">
-                            <span>📅 Creado: {org.createdAt || 'Fecha no disponible'}</span>
                             <span>🆔 ID: {org.id ? org.id.toString().slice(-8) : 'N/A'}</span>
+                            {org.users && <span>👥 {org.users.length} usuarios</span>}
                           </div>
                         </div>
                         <div className="flex gap-2 ml-6">
