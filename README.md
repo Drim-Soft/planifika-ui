@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+
+## Docker Command
+
+```bash
+docker build -t planifika-ui .
+docker run -p 3000:3000 planifika-ui
+```
+
 ## Getting Started
 
 First, run the development server:
