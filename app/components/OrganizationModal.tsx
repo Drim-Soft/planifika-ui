@@ -4,10 +4,11 @@ import { useState, useRef, useEffect } from "react";
 
 interface Organization {
   id?: number;
+  nit: string;
   name: string;
-  address: string;
-  phone: string;
-  photoURL: string;
+  address?: string;
+  phone?: string;
+  photoURL?: string;
 }
 
 interface OrganizationModalProps {
@@ -63,6 +64,7 @@ export default function OrganizationModal({
   editingOrganization 
 }: OrganizationModalProps) {
   const [formData, setFormData] = useState({
+    nit: editingOrganization?.nit || "",
     name: editingOrganization?.name || "",
     address: editingOrganization?.address || "",
     phone: editingOrganization?.phone || "",
@@ -87,8 +89,34 @@ export default function OrganizationModal({
     };
   }, []);
 
+  // Actualizar formData cuando cambie la organización que se está editando
+  useEffect(() => {
+    if (editingOrganization) {
+      setFormData({
+        nit: editingOrganization.nit || "",
+        name: editingOrganization.name || "",
+        address: editingOrganization.address || "",
+        phone: editingOrganization.phone || "",
+        photoURL: editingOrganization.photoURL || ""
+      });
+    } else {
+      setFormData({
+        nit: "",
+        name: "",
+        address: "",
+        phone: "",
+        photoURL: ""
+      });
+    }
+  }, [editingOrganization]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.nit.trim()) {
+      alert("El NIT de la organización es obligatorio");
+      return;
+    }
     
     if (!formData.name.trim()) {
       alert("El nombre de la organización es obligatorio");
@@ -99,7 +127,7 @@ export default function OrganizationModal({
     
     try {
       await onSave(formData);
-      setFormData({ name: "", address: "", phone: "", photoURL: "" });
+      setFormData({ nit: "", name: "", address: "", phone: "", photoURL: "" });
       onClose();
     } catch (error) {
       console.error("Error al guardar organización:", error);
@@ -113,7 +141,7 @@ export default function OrganizationModal({
   };
 
   const handleClose = () => {
-    setFormData({ name: "", address: "", phone: "", photoURL: "" });
+    setFormData({ nit: "", name: "", address: "", phone: "", photoURL: "" });
     setSelectedAuthProvider(null);
     setShowAuthDropdown(false);
     onClose();
@@ -156,6 +184,20 @@ export default function OrganizationModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-black mb-2">
+                NIT de la Organización *
+              </label>
+              <input
+                type="text"
+                value={formData.nit}
+                onChange={(e) => setFormData({...formData, nit: e.target.value})}
+                className="planifika-input"
+                placeholder="Ej: 860.123.456-7"
+                required
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-black mb-2">
                 Nombre de la Organización *

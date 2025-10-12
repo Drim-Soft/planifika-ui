@@ -3,13 +3,12 @@ import { API_CONFIG } from '../config/api';
 
 export interface Organization {
   id?: number;
+  nit: string;
   name: string;
-  address: string;
-  phone: string;
-  photoURL: string;
-  serviceType?: string;
-  description?: string;
-  createdAt?: string;
+  address?: string;
+  phone?: string;
+  photoURL?: string;
+  users?: any[];
 }
 
 class OrganizationService {
