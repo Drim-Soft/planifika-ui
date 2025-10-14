@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import OrganizationModal from "./components/OrganizationModal";
 import { organizationService, Organization } from "./services/organizationService";
@@ -23,33 +22,29 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-white">
-      {/* Imagen de fondo con fallback */}
-      <div className="absolute inset-0 z-0 bg-white">
-        <Image
-          src="/assets/images/planifika_logo.png"
-          alt="Fondo de Planifika"
-          fill
-          className="object-cover"
-          priority
-          onError={(e) => {
-            // Si la imagen falla al cargar, ocultar el overlay
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-          }}
-        />
-        <div className="absolute inset-0 bg-black bg-opacity-30"></div>
-      </div>
+    <div 
+      className="min-h-screen relative overflow-hidden"
+      style={{
+        backgroundImage: 'url(https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        minHeight: '100vh',
+        backgroundColor: '#f3f4f6'
+      }}
+    >
 
       {/* Contenido principal */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-4xl">
-          <div className="text-center text-white animate-fade-in">
-            <h1 className="text-5xl lg:text-7xl font-bold mb-8 leading-tight">
-              ¡Bienvenido a <span className="text-yellow-400">Planifika</span>!
+          {/* Recuadro blanco para el contenido */}
+          <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 animate-fade-in">
+            <div className="text-center text-gray-800">
+            <h1 className="text-3xl lg:text-5xl font-bold mb-6 leading-tight">
+              ¡Bienvenido a <span className="text-yellow-500">Planifika</span>!
             </h1>
-            <p className="text-xl lg:text-3xl mb-12 leading-relaxed max-w-3xl mx-auto">
-              Gracias <span className="font-semibold text-yellow-300">{userName}</span> por confiar en Planifika. 
+            <p className="text-lg lg:text-xl mb-8 leading-relaxed max-w-3xl mx-auto text-gray-700">
+              Gracias <span className="font-semibold text-yellow-600">{userName}</span> por confiar en Planifika. 
               Tus proyectos quedarán en las mejores manos. Ahora crea tu organización y registra el tipo de servicio, 
               e iniciemos la mejor aventura académica.
             </p>
@@ -57,28 +52,29 @@ export default function Home() {
             <div className="flex justify-center">
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="planifika-button-primary text-lg px-10 py-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                className="planifika-button-primary text-base px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               >
                 🏢 Crear Organización
               </button>
             </div>
 
-            {/* Características destacadas */}
-            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              <div className="bg-white bg-opacity-15 backdrop-blur-sm rounded-lg p-6 border border-yellow-300 border-opacity-30 hover:bg-yellow-400 hover:bg-opacity-20 transition-all duration-300">
-                <div className="text-4xl mb-4">📊</div>
-                <h3 className="text-xl font-semibold mb-2 text-black">Gestión Inteligente</h3>
-                <p className="text-sm text-gray-800">Organiza y planifica tus proyectos académicos de manera eficiente</p>
-              </div>
-              <div className="bg-white bg-opacity-15 backdrop-blur-sm rounded-lg p-6 border border-yellow-300 border-opacity-30 hover:bg-yellow-400 hover:bg-opacity-20 transition-all duration-300">
-                <div className="text-4xl mb-4">👥</div>
-                <h3 className="text-xl font-semibold mb-2 text-black">Colaboración</h3>
-                <p className="text-sm text-gray-800">Trabaja en equipo y coordina esfuerzos con tus compañeros</p>
-              </div>
-              <div className="bg-white bg-opacity-15 backdrop-blur-sm rounded-lg p-6 border border-yellow-300 border-opacity-30 hover:bg-yellow-400 hover:bg-opacity-20 transition-all duration-300">
-                <div className="text-4xl mb-4">🎯</div>
-                <h3 className="text-xl font-semibold mb-2 text-black">Resultados</h3>
-                <p className="text-sm text-gray-800">Alcanza tus objetivos académicos con herramientas profesionales</p>
+              {/* Características destacadas */}
+              <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div className="bg-gray-50 rounded-lg p-4 border border-yellow-300 hover:bg-yellow-50 transition-all duration-300 shadow-sm">
+                  <div className="text-3xl mb-3">📊</div>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Gestión Inteligente</h3>
+                  <p className="text-xs text-gray-600">Organiza y planifica tus proyectos académicos de manera eficiente</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-yellow-300 hover:bg-yellow-50 transition-all duration-300 shadow-sm">
+                  <div className="text-3xl mb-3">👥</div>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Colaboración</h3>
+                  <p className="text-xs text-gray-600">Trabaja en equipo y coordina esfuerzos con tus compañeros</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-yellow-300 hover:bg-yellow-50 transition-all duration-300 shadow-sm">
+                  <div className="text-3xl mb-3">🎯</div>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Resultados</h3>
+                  <p className="text-xs text-gray-600">Alcanza tus objetivos académicos con herramientas profesionales</p>
+                </div>
               </div>
             </div>
           </div>
