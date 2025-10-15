@@ -1,17 +1,8 @@
-// Servicio para manejar las operaciones de organizaciones con el backend
+// Servicio para manejar operaciones de usuario
 import { API_CONFIG, DEFAULT_API_HEADERS } from '../config/api';
+import { UserProfile } from '../types/user';
 
-export interface Organization {
-  id?: number;
-  nit: string;
-  name: string;
-  address?: string;
-  phone?: string;
-  photoURL?: string;
-  users?: any[];
-}
-
-class OrganizationService {
+class UserService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     
@@ -24,13 +15,6 @@ class OrganizationService {
       ...options,
     };
 
-    // Debug logging
-    console.log('Organization Service Request:', {
-      url,
-      headers: config.headers,
-      method: config.method || 'GET'
-    });
-
     try {
       const response = await fetch(url, config);
       
@@ -40,7 +24,7 @@ class OrganizationService {
         
         try {
           const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorData.error || errorMessage;
+          errorMessage = errorData.error || errorData.message || errorMessage;
         } catch {
           errorMessage = errorText || errorMessage;
         }
@@ -52,12 +36,10 @@ class OrganizationService {
     } catch (error) {
       console.error('API request failed:', error);
       
-      // Manejar errores de conexión específicamente
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG.BASE_URL}`);
       }
       
-      // Manejar errores de timeout
       if (error instanceof Error && error.name === 'TimeoutError') {
         throw new Error('La solicitud tardó demasiado tiempo. El servidor puede estar sobrecargado o no disponible.');
       }
@@ -66,37 +48,44 @@ class OrganizationService {
     }
   }
 
-  async getAllOrganizations(): Promise<Organization[]> {
-    return this.request<Organization[]>('/organizations');
+  async getAllUsers(): Promise<UserProfile[]> {
+    return this.request<UserProfile[]>('/users');
   }
 
-  async getOrganizationById(id: number): Promise<Organization> {
-    return this.request<Organization>(`/organizations/${id}`);
+  async getUserById(id: number): Promise<UserProfile> {
+    return this.request<UserProfile>(`/users/${id}`);
   }
 
-  async createOrganization(organization: Omit<Organization, 'id'>): Promise<Organization> {
-    return this.request<Organization>('/organizations', {
+  async createUser(user: Omit<UserProfile, 'id'>): Promise<UserProfile> {
+    return this.request<UserProfile>('/users', {
       method: 'POST',
-      body: JSON.stringify(organization),
+      body: JSON.stringify(user),
     });
   }
 
-  async updateOrganization(id: number, organization: Omit<Organization, 'id'>): Promise<Organization> {
-    return this.request<Organization>(`/organizations/${id}`, {
+  async updateUser(id: number, user: Partial<UserProfile>): Promise<UserProfile> {
+    return this.request<UserProfile>(`/users/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(organization),
+      body: JSON.stringify(user),
     });
   }
 
-  async deleteOrganization(id: number): Promise<void> {
-    return this.request<void>(`/organizations/${id}`, {
+  async updateUserStatus(id: number, status: string): Promise<UserProfile> {
+    return this.request<UserProfile>(`/users/${id}/status/${status}`, {
+      method: 'PATCH',
+    });
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    return this.request<void>(`/users/${id}`, {
       method: 'DELETE',
     });
   }
 
-  async getUsersByOrganization(id: number): Promise<any[]> {
-    return this.request<any[]>(`/organizations/${id}/users`);
+  // Método para obtener usuarios por organización
+  async getUsersByOrganization(organizationId: number): Promise<UserProfile[]> {
+    return this.request<UserProfile[]>(`/organizations/${organizationId}/users`);
   }
 }
 
-export const organizationService = new OrganizationService();
+export const userService = new UserService();

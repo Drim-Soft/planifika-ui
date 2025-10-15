@@ -1,17 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import OrganizationModal from "../components/OrganizationModal";
 import { organizationService, Organization } from "../services/organizationService";
+import { useAuth } from "../contexts/AuthContext";
+import { UserRole } from "../types/auth";
 
 export default function CreateOrganization() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const router = useRouter();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [backendError, setBackendError] = useState<string | null>(null);
+
+  // Verificar autenticación y rol
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/');
+      return;
+    }
+
+    if (user && user.role !== UserRole.ADMIN) {
+      router.push('/dashboard');
+      return;
+    }
+  }, [isAuthenticated, authLoading, user, router]);
 
   // Cargar organizaciones al montar el componente
   useEffect(() => {
@@ -83,6 +101,23 @@ export default function CreateOrganization() {
       alert("Error al eliminar la organización");
     }
   };
+
+  // Mostrar loading mientras se verifica la autenticación
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando acceso...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no está autenticado o no es admin, no mostrar nada (se redirigirá)
+  if (!isAuthenticated || !user || user.role !== UserRole.ADMIN) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">
