@@ -1,17 +1,17 @@
 // Servicio para manejar autenticación con el backend
-import { API_CONFIG, DEFAULT_API_HEADERS } from '../config/api';
+import { API_CONFIG_USERS_PLANIFIKA, DEFAULT_API_HEADERS } from '../config/api';
 import { SignupRequest, SignupResponse, LoginRequest, LoginResponse, UserInfoResponse, AuthError } from '../types/auth';
 
 class AuthService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG_USERS_PLANIFIKA.BASE_URL}${endpoint}`;
     
     const config: RequestInit = {
       headers: {
         ...DEFAULT_API_HEADERS,
         ...options.headers,
       },
-      signal: AbortSignal.timeout(API_CONFIG.TIMEOUT),
+      signal: AbortSignal.timeout(API_CONFIG_USERS_PLANIFIKA.TIMEOUT),
       ...options,
     };
 
@@ -38,7 +38,7 @@ class AuthService {
       
       // Manejar errores de conexión específicamente
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG.BASE_URL}`);
+        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG_USERS_PLANIFIKA.BASE_URL}`);
       }
       
       // Manejar errores de timeout
@@ -77,6 +77,7 @@ class AuthService {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        'ngrok-skip-browser-warning': 'true',
       },
     });
   }

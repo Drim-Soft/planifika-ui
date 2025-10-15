@@ -201,7 +201,7 @@ export default function AdminLogin() {
               <p className="text-sm text-gray-600">
                 ¿No tienes cuenta?{" "}
                 <Link 
-                  href="/pages/signup?role=1" 
+                  href={EXTERNAL_URLS.MAIN_SYSTEM!} 
                   className="text-yellow-600 hover:text-yellow-700 font-medium"
                 >
                   Regístrate como administrador

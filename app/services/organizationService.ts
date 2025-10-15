@@ -1,5 +1,5 @@
 // Servicio para manejar las operaciones de organizaciones con el backend
-import { API_CONFIG, DEFAULT_API_HEADERS } from '../config/api';
+import { API_CONFIG_ORGANIZATIONS, DEFAULT_API_HEADERS } from '../config/api';
 
 export interface Organization {
   IDOrganization?: number;
@@ -14,14 +14,14 @@ export interface Organization {
 
 class OrganizationService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG_ORGANIZATIONS.BASE_URL}${endpoint}`;
     
     const config: RequestInit = {
       headers: {
         ...DEFAULT_API_HEADERS,
         ...options.headers,
       },
-      signal: AbortSignal.timeout(API_CONFIG.TIMEOUT),
+      signal: AbortSignal.timeout(API_CONFIG_ORGANIZATIONS.TIMEOUT),
       ...options,
     };
 
@@ -55,7 +55,7 @@ class OrganizationService {
       
       // Manejar errores de conexión específicamente
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG.BASE_URL}`);
+        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG_ORGANIZATIONS.BASE_URL}`);
       }
       
       // Manejar errores de timeout

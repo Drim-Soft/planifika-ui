@@ -5,7 +5,7 @@
  * el mantenimiento y evitar URLs hardcodeadas en el código.
  */
 
-const LANDING_BASE_URL = process.env.NEXT_PUBLIC_LANDING_BASE_URL || 'https://planifika.com';
+const LANDING_BASE_URL = process.env.NEXT_PUBLIC_LANDING_BASE_URL;
 
 export const EXTERNAL_URLS = {
   // URL principal del sistema externo

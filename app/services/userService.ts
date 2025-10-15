@@ -1,17 +1,17 @@
 // Servicio para manejar operaciones de usuario
-import { API_CONFIG, DEFAULT_API_HEADERS } from '../config/api';
+import { API_CONFIG_USERS_PLANIFIKA, DEFAULT_API_HEADERS } from '../config/api';
 import { UserProfile } from '../types/user';
 
 class UserService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG_USERS_PLANIFIKA.BASE_URL}${endpoint}`;
     
     const config: RequestInit = {
       headers: {
         ...DEFAULT_API_HEADERS,
         ...options.headers,
       },
-      signal: AbortSignal.timeout(API_CONFIG.TIMEOUT),
+      signal: AbortSignal.timeout(API_CONFIG_USERS_PLANIFIKA.TIMEOUT),
       ...options,
     };
 
@@ -37,7 +37,7 @@ class UserService {
       console.error('API request failed:', error);
       
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG.BASE_URL}`);
+        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG_USERS_PLANIFIKA.BASE_URL}`);
       }
       
       if (error instanceof Error && error.name === 'TimeoutError') {

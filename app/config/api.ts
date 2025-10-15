@@ -1,6 +1,13 @@
 // Configuración de la API
-export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1',
+export const API_CONFIG_USERS_PLANIFIKA = {
+  BASE_URL: process.env.NEXT_PUBLIC_API_USERS_PLANIFIKA_URL,
+  TIMEOUT: 10000, // 10 segundos
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000, // 1 segundo
+};
+
+export const API_CONFIG_ORGANIZATIONS = {
+  BASE_URL: process.env.NEXT_PUBLIC_API_ORGANIZATIONS_URL,
   TIMEOUT: 10000, // 10 segundos
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000, // 1 segundo
@@ -15,10 +22,10 @@ export const DEFAULT_API_HEADERS = {
 // Función para verificar si el backend está disponible
 export const checkBackendHealth = async (): Promise<boolean> => {
   try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/health`, {
+    const response = await fetch(`${API_CONFIG_USERS_PLANIFIKA.BASE_URL}/health`, {
       method: 'GET',
       headers: DEFAULT_API_HEADERS,
-      signal: AbortSignal.timeout(API_CONFIG.TIMEOUT),
+      signal: AbortSignal.timeout(API_CONFIG_USERS_PLANIFIKA.TIMEOUT),
     });
     return response.ok;
   } catch (error) {
@@ -30,19 +37,19 @@ export const checkBackendHealth = async (): Promise<boolean> => {
 // Función para probar la conexión con ngrok
 export const testNgrokConnection = async (): Promise<{ success: boolean; message: string }> => {
   try {
-    console.log('Testing connection to:', API_CONFIG.BASE_URL);
+    console.log('Testing connection to:', API_CONFIG_USERS_PLANIFIKA.BASE_URL);
     console.log('Using headers:', DEFAULT_API_HEADERS);
     
-    const response = await fetch(`${API_CONFIG.BASE_URL}/health`, {
+    const response = await fetch(`${API_CONFIG_USERS_PLANIFIKA.BASE_URL}/health`, {
       method: 'GET',
       headers: DEFAULT_API_HEADERS,
-      signal: AbortSignal.timeout(API_CONFIG.TIMEOUT),
+      signal: AbortSignal.timeout(API_CONFIG_USERS_PLANIFIKA.TIMEOUT),
     });
     
     if (response.ok) {
       return { 
         success: true, 
-        message: `Conexión exitosa con ngrok: ${API_CONFIG.BASE_URL}` 
+        message: `Conexión exitosa con ngrok: ${API_CONFIG_USERS_PLANIFIKA.BASE_URL}` 
       };
     } else {
       return { 
