@@ -5,18 +5,20 @@
  * el mantenimiento y evitar URLs hardcodeadas en el código.
  */
 
+const LANDING_BASE_URL = process.env.NEXT_PUBLIC_LANDING_BASE_URL;
+
 export const EXTERNAL_URLS = {
   // URL principal del sistema externo
-  MAIN_SYSTEM: 'http://localhost:5173/',
+  MAIN_SYSTEM: LANDING_BASE_URL,
   
   // URLs de documentación
-  DOCUMENTATION: 'http://localhost:5173/docs',
-  
+  DOCUMENTATION: `${LANDING_BASE_URL}/docs`,
+
   // URLs de soporte
-  SUPPORT: 'http://localhost:5173/support',
-  
+  SUPPORT: `${LANDING_BASE_URL}/support`,
+
   // URLs de contacto
-  CONTACT: 'http://localhost:5173/contact',
+  CONTACT: `${LANDING_BASE_URL}/contact`,
 } as const;
 
 /**
@@ -25,7 +27,7 @@ export const EXTERNAL_URLS = {
  * @returns URL externa
  */
 export const getExternalUrl = (key: keyof typeof EXTERNAL_URLS): string => {
-  return EXTERNAL_URLS[key];
+  return EXTERNAL_URLS[key]!;
 };
 
 /**

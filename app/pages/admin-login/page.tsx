@@ -141,7 +141,7 @@ export default function AdminLogin() {
             <p className="text-sm text-gray-600">
               ¿No tienes cuenta?{" "}
               <Link 
-                href={EXTERNAL_URLS.MAIN_SYSTEM} 
+                href={EXTERNAL_URLS.MAIN_SYSTEM!} 
                 className="text-yellow-600 hover:text-yellow-700 font-medium"
               >
                 Solicita acceso
