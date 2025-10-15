@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { EXTERNAL_URLS } from "../../config/urls";
 
 export default function AdminLogin() {
   const [formData, setFormData] = useState({
@@ -140,7 +141,7 @@ export default function AdminLogin() {
             <p className="text-sm text-gray-600">
               ¿No tienes cuenta?{" "}
               <Link 
-                href="#" 
+                href={EXTERNAL_URLS.MAIN_SYSTEM!} 
                 className="text-yellow-600 hover:text-yellow-700 font-medium"
               >
                 Solicita acceso
