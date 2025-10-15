@@ -4,11 +4,13 @@ import { UserRole } from '../types/auth';
 export const ROLE_LABELS = {
   [UserRole.ADMIN]: 'Administrador',
   [UserRole.EXTERNAL]: 'Usuario Externo',
+  [UserRole.COLLABORATOR]: 'Estudiante',
 } as const;
 
 export const ROLE_DESCRIPTIONS = {
   [UserRole.ADMIN]: 'Puede gestionar usuarios, proyectos y organizaciones',
   [UserRole.EXTERNAL]: 'Puede crear y gestionar sus propios proyectos',
+  [UserRole.COLLABORATOR]: 'Puede ver y participar en proyectos académicos',
 } as const;
 
 export const ROLE_PERMISSIONS = {
@@ -25,6 +27,11 @@ export const ROLE_PERMISSIONS = {
     'create_projects',
     'view_own_projects',
     'update_own_projects',
+  ],
+  [UserRole.COLLABORATOR]: [
+    'view_academic_projects',
+    'participate_in_projects',
+    'view_academic_dashboard',
   ],
 } as const;
 
@@ -53,6 +60,10 @@ export function isExternal(role: UserRole): boolean {
   return role === UserRole.EXTERNAL;
 }
 
+export function isCollaborator(role: UserRole): boolean {
+  return role === UserRole.COLLABORATOR;
+}
+
 export function getRoleFromUrlParam(roleParam: string | null): UserRole | null {
   if (!roleParam) return null;
   
@@ -60,6 +71,7 @@ export function getRoleFromUrlParam(roleParam: string | null): UserRole | null {
   
   if (roleNumber === UserRole.ADMIN) return UserRole.ADMIN;
   if (roleNumber === UserRole.EXTERNAL) return UserRole.EXTERNAL;
+  if (roleNumber === UserRole.COLLABORATOR) return UserRole.COLLABORATOR;
   
   return null;
 }
@@ -71,9 +83,11 @@ export function validateRole(role: UserRole): boolean {
 export function getDefaultRouteForRole(role: UserRole): string {
   switch (role) {
     case UserRole.ADMIN:
-      return '/dashboard';
+      return '/create-organization';
     case UserRole.EXTERNAL:
-      return '/create-project';
+      return '/dashboard/external';
+    case UserRole.COLLABORATOR:
+      return '/dashboard/academic';
     default:
       return '/dashboard';
   }

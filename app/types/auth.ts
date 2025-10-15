@@ -69,7 +69,8 @@ export interface User {
 
 export enum UserRole {
   ADMIN = 1,
-  EXTERNAL = 2
+  EXTERNAL = 2,
+  COLLABORATOR = 3 // Estudiante/Colaborador
 }
 
 export enum UserStatus {
@@ -88,6 +89,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   signup: (data: SignupRequest) => Promise<SignupResponse>;
   login: (data: LoginRequest) => Promise<LoginResponse>;
+  externalLogin: (data: LoginRequest) => Promise<LoginResponse>;
   logout: () => void;
   error: AuthError | null;
 }

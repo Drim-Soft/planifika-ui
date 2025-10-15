@@ -187,14 +187,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Crear objeto usuario
       const userData: User = {
-        id: userInfo.userId || userInfo.id || 0,
+        id: userInfo.userId || 0,
         name: userInfo.name || '',
         email: userInfo.email || '',
         photoUrl: userInfo.photoUrl || '',
         role: finalRole,
         status: userInfo.iduserstatus || 1,
         organizationId: userInfo.idorganization || undefined,
-        supabaseUserId: (userInfo.userId || userInfo.id || 0).toString(),
+        supabaseUserId: (userInfo.userId || 0).toString(),
       };
       
       console.log('Final user data:', userData);
@@ -215,6 +215,75 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const authError: AuthError = {
         message: error instanceof Error ? error.message : 'Error desconocido durante el login',
         code: 'LOGIN_ERROR'
+      };
+      setError(authError);
+      throw authError;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const externalLogin = async (data: LoginRequest): Promise<LoginResponse> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log('Iniciando login externo para estudiante...');
+      const response = await authService.externalLogin(data);
+      console.log('External login response:', response);
+      
+      // Para login externo, no intentar obtener info del usuario con /auth/me
+      // porque el token de Supabase SIU no es compatible con ese endpoint
+      // En su lugar, usar la información básica del email
+      
+      // Para login externo (estudiantes), forzar userType 3 (COLLABORATOR)
+      const finalRole = UserRole.COLLABORATOR; // Siempre 3 para estudiantes
+      console.log('Forzando role COLLABORATOR (3) para login externo de estudiante');
+      
+      // Función para convertir email prefix a nombre legible
+      const formatEmailToName = (email: string): string => {
+        const prefix = email.split('@')[0];
+        if (!prefix) return 'Usuario Externo';
+        
+        // Convertir guiones bajos y puntos a espacios
+        const formatted = prefix
+          .replace(/[._]/g, ' ')
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+        
+        return formatted || 'Usuario Externo';
+      };
+      
+      // Crear objeto usuario con información básica
+      const userData: User = {
+        id: 0, // ID temporal, se actualizará cuando se cree el usuario en la BD
+        name: formatEmailToName(data.email), // Convertir email a nombre legible
+        email: data.email,
+        photoUrl: '',
+        role: finalRole,
+        status: 1, // ACTIVE
+        organizationId: undefined,
+        supabaseUserId: response.user?.id || '0',
+      };
+      
+      console.log('Final external user data:', userData);
+      console.log('Final role value:', userData.role);
+
+      // Guardar en localStorage
+      localStorage.setItem('planifika_user', JSON.stringify(userData));
+      localStorage.setItem('planifika_token', response.access_token);
+
+      setUser(userData);
+
+      // Redireccionar al dashboard académico
+      router.push('/dashboard/academic');
+
+      return response;
+    } catch (error) {
+      const authError: AuthError = {
+        message: error instanceof Error ? error.message : 'Error desconocido durante el login externo',
+        code: 'EXTERNAL_LOGIN_ERROR'
       };
       setError(authError);
       throw authError;
@@ -273,6 +342,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated,
     signup,
     login,
+    externalLogin,
     logout,
     error,
   };

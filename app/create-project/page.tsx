@@ -7,11 +7,36 @@ import { useAuth } from "../contexts/AuthContext";
 import { UserRole } from "../types/auth";
 import { getRoleLabel } from "../utils/roleUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { projectService } from "../services/projectService";
+import { Project } from "../types/project";
 
 export default function CreateProject() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+
+  // Cargar proyectos del usuario
+  useEffect(() => {
+    const loadUserProjects = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoadingProjects(true);
+        const projects = await projectService.getUserProjects(user.id);
+        setUserProjects(projects);
+      } catch (err) {
+        console.error('Error loading user projects:', err);
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    };
+
+    if (isAuthenticated && user) {
+      loadUserProjects();
+    }
+  }, [isAuthenticated, user]);
 
   // Verificar autenticación y rol
   useEffect(() => {
@@ -26,13 +51,9 @@ export default function CreateProject() {
     }
   }, [isAuthenticated, authLoading, user, router]);
 
-  const handleCreateProject = async () => {
-    setIsLoading(true);
-    // Aquí se implementará la lógica para crear proyectos
-    setTimeout(() => {
-      setIsLoading(false);
-      alert('Funcionalidad de crear proyecto en desarrollo');
-    }, 1000);
+  // Navegar a crear nuevo proyecto
+  const handleCreateNewProject = () => {
+    router.push('/create-project/new');
   };
 
   // Mostrar loading mientras se verifica la autenticación
@@ -73,7 +94,7 @@ export default function CreateProject() {
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">🚀</div>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                Crear Proyecto
+                ¡Hola, {user.name}! 👋
               </h1>
               <p className="text-lg text-gray-600">
                 Gestiona tus proyectos de manera eficiente
@@ -85,10 +106,10 @@ export default function CreateProject() {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-sm text-blue-800">
-                    <strong>Usuario:</strong> {user.name}
+                    <strong>Email:</strong> {user.email}
                   </p>
                   <p className="text-xs text-blue-600">
-                    Email: {user.email} | Rol: {getRoleLabel(user.role)}
+                    Rol: {getRoleLabel(user.role)}
                   </p>
                 </div>
                 <button
@@ -108,41 +129,74 @@ export default function CreateProject() {
                 <div className="flex items-start">
                   <div className="text-yellow-600 mr-2">ℹ️</div>
                   <div className="text-sm text-yellow-800">
-                    <p className="font-medium mb-1">Permisos de Usuario Externo</p>
+                    <p className="font-medium mb-1">Gestión de Proyectos</p>
                     <p className="text-xs">
                       Como usuario externo, puedes crear y gestionar tus propios proyectos. 
-                      No tienes acceso a funciones administrativas.
+                      Aquí puedes ver todos tus proyectos y crear nuevos.
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Botón para crear proyecto */}
+              {/* Botón para crear nuevo proyecto */}
               <div className="text-center">
                 <button
-                  onClick={handleCreateProject}
-                  disabled={isLoading}
-                  className="w-full planifika-button-primary text-lg py-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  onClick={handleCreateNewProject}
+                  className="w-full planifika-button-primary text-lg py-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center">
-                      <LoadingSpinner size="sm" />
-                      <span className="ml-2">Creando proyecto...</span>
-                    </div>
-                  ) : (
-                    '🚀 Crear Nuevo Proyecto'
-                  )}
+                  🚀 Crear Nuevo Proyecto
                 </button>
               </div>
 
-              {/* Lista de proyectos (placeholder) */}
+              {/* Lista de proyectos del usuario */}
               <div className="mt-8">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Mis Proyectos</h3>
-                <div className="text-center py-8 text-gray-500">
-                  <div className="text-4xl mb-2">📁</div>
-                  <p>No tienes proyectos creados aún</p>
-                  <p className="text-sm">Usa el botón de arriba para crear tu primer proyecto</p>
-                </div>
+                
+                {isLoadingProjects ? (
+                  <div className="text-center py-8">
+                    <LoadingSpinner size="md" text="Cargando proyectos..." />
+                  </div>
+                ) : userProjects.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-4xl mb-2">📁</div>
+                    <p>No tienes proyectos creados aún</p>
+                    <p className="text-sm">Usa el botón de arriba para crear tu primer proyecto</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {userProjects.map((project) => (
+                      <div key={project.IDProject} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-800 mb-1">{project.name}</h4>
+                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{project.description}</p>
+                            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                              <span className="bg-blue-100 px-2 py-1 rounded">
+                                📅 {new Date(project.startDate).toLocaleDateString()}
+                              </span>
+                              <span className="bg-green-100 px-2 py-1 rounded">
+                                🎯 {project.methodology?.name}
+                              </span>
+                              <span className="bg-purple-100 px-2 py-1 rounded">
+                                📊 {project.projectStatus?.name}
+                              </span>
+                              {project.budget && (
+                                <span className="bg-yellow-100 px-2 py-1 rounded">
+                                  💰 ${project.budget.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <span className="text-sm text-gray-400">
+                              Progreso: {project.percentageProgress || 0}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
             </div>

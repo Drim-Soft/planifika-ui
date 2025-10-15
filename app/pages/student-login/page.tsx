@@ -6,7 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import LoadingSpinner from "../../components/LoadingSpinner";
 
 export default function StudentLogin() {
-  const { login, isLoading, error } = useAuth();
+  const { externalLogin, isLoading, error } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -29,7 +29,7 @@ export default function StudentLogin() {
     setLocalError(null);
 
     try {
-      await login({
+      await externalLogin({
         email: formData.email,
         password: formData.password
       });
@@ -96,6 +96,7 @@ export default function StudentLogin() {
                 placeholder="tu.email@universidad.edu"
                 required
                 disabled={isLoading}
+                autoComplete="email"
               />
             </div>
 
@@ -113,6 +114,7 @@ export default function StudentLogin() {
                 placeholder="••••••••"
                 required
                 disabled={isLoading}
+                autoComplete="current-password"
               />
             </div>
 

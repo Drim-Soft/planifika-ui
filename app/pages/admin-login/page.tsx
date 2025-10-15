@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../contexts/AuthContext";
 import { EXTERNAL_URLS } from "../../config/urls";
-import { testNgrokConnection } from "../../config/api";
 import { getRoleLabel } from "../../utils/roleUtils";
 import LoadingSpinner from "../../components/LoadingSpinner";
 
@@ -16,7 +15,6 @@ export default function AdminLogin() {
     rememberMe: false
   });
   const [localError, setLocalError] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -42,27 +40,6 @@ export default function AdminLogin() {
     }
   };
 
-  const testConnection = async () => {
-    setConnectionStatus('Probando conexión...');
-    try {
-      const result = await testNgrokConnection();
-      setConnectionStatus(result.message);
-    } catch (error) {
-      setConnectionStatus('Error al probar conexión');
-    }
-  };
-
-  const showLocalStorage = () => {
-    const userData = localStorage.getItem('planifika_user');
-    const token = localStorage.getItem('planifika_token');
-    
-    console.log('=== LOCALSTORAGE DEBUG ===');
-    console.log('planifika_user:', userData);
-    console.log('planifika_token:', token ? 'Presente' : 'No presente');
-    console.log('========================');
-    
-    setConnectionStatus(`localStorage - User: ${userData ? 'Presente' : 'No presente'}, Token: ${token ? 'Presente' : 'No presente'}`);
-  };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -106,30 +83,6 @@ export default function AdminLogin() {
             </div>
           )}
 
-          {/* Estado de conexión */}
-          {connectionStatus && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-600">
-                {connectionStatus}
-              </p>
-            </div>
-          )}
-
-          {/* Botones de debug */}
-          <div className="mb-4 text-center space-x-4">
-            <button
-              onClick={testConnection}
-              className="text-sm text-gray-500 hover:text-gray-700 underline"
-            >
-              🔧 Probar conexión
-            </button>
-            <button
-              onClick={showLocalStorage}
-              className="text-sm text-blue-500 hover:text-blue-700 underline"
-            >
-              📦 Ver localStorage
-            </button>
-          </div>
 
           {/* Información del usuario si está autenticado */}
           {isAuthenticated && user && (

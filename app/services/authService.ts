@@ -129,6 +129,14 @@ class AuthService {
       method: 'DELETE',
     });
   }
+
+  // Método para login externo (estudiantes)
+  async externalLogin(data: LoginRequest): Promise<LoginResponse> {
+    return this.request<LoginResponse>('/auth/external-login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const authService = new AuthService();

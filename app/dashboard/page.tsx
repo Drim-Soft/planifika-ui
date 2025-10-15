@@ -25,10 +25,23 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Redirigir si es admin (debería ir a create-organization)
+  // Redirigir según el rol del usuario
   useEffect(() => {
-    if (user && user.role === UserRole.ADMIN) {
-      router.push('/create-organization');
+    if (user) {
+      switch (user.role) {
+        case UserRole.ADMIN:
+          router.push('/create-organization');
+          break;
+        case UserRole.EXTERNAL:
+          router.push('/dashboard/external');
+          break;
+        case UserRole.COLLABORATOR:
+          router.push('/dashboard/academic');
+          break;
+        default:
+          // Mantener en dashboard principal para otros roles
+          break;
+      }
     }
   }, [user, router]);
 
@@ -93,7 +106,7 @@ export default function Dashboard() {
             ¡Bienvenido, {user.name}!
           </h2>
           <p className="text-gray-600">
-            Aquí puedes gestionar tus proyectos académicos y ver el progreso de tus actividades.
+            Aquí puedes gestionar tus proyectos y ver el progreso de tus actividades.
           </p>
         </div>
 

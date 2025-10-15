@@ -419,16 +419,6 @@ function SignUpContent() {
                   <div className="flex-1 border-t border-gray-300"></div>
                 </div>
 
-                {/* Enlace a login de administrador */}
-                <div className="mt-4 text-center">
-                  <Link 
-                    href="/pages/admin-login" 
-                    className="text-xs text-gray-600 hover:text-gray-800 font-medium"
-                  >
-                    ¿Eres administrador?{" "}
-                    <span className="text-blue-600">Inicia sesión aquí</span>
-                  </Link>
-                </div>
               </div>
             </div>
           </div>
