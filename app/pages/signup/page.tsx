@@ -1,16 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { EXTERNAL_URLS } from "../../config/urls";
+import { useAuth } from "../../contexts/AuthContext";
+import { UserRole, SignupRequest } from "../../types/auth";
+import { getRoleFromUrlParam, getRoleLabel, getRoleDescription, validateRole } from "../../utils/roleUtils";
+import { useFormValidation } from "../../hooks/useFormValidation";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { getFriendlySignupErrorMessage } from "../../utils/errorMessages";
 
-export default function SignUp() {
+function SignUpContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { signup, isLoading, error } = useAuth();
+  
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    phone: "",
+    photoUrl: ""
   });
+
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  
+  // Configurar reglas de validación
+  const validationRules = {
+    name: { required: true, minLength: 2, maxLength: 100 },
+    email: { 
+      required: true, 
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      custom: (value: string) => {
+        if (!value.includes('@')) return 'El email debe contener @';
+        if (!value.includes('.')) return 'El email debe contener un dominio válido';
+        return null;
+      }
+    },
+    password: { required: true, minLength: 6, maxLength: 50 },
+    confirmPassword: { 
+      required: true,
+      custom: (value: string) => {
+        if (value !== formData.password) return 'Las contraseñas no coinciden';
+        return null;
+      }
+    },
+    phone: { 
+      required: userRole === UserRole.ADMIN,
+      pattern: /^[\+]?[1-9][\d]{0,15}$/,
+      custom: (value: string) => {
+        if (userRole === UserRole.ADMIN && !value) return 'El teléfono es requerido para administradores';
+        return null;
+      }
+    },
+    photoUrl: {
+      pattern: /^https?:\/\/.+/,
+      custom: (value: string) => {
+        if (value && !value.match(/^https?:\/\/.+/)) {
+          return 'La URL debe comenzar con http:// o https://';
+        }
+        return null;
+      }
+    }
+  };
+
+  const { errors, validateForm, validateSingleField, clearError } = useFormValidation(validationRules);
+
+  // Obtener el rol desde la URL
+  useEffect(() => {
+    const roleParam = searchParams.get('role');
+    const role = getRoleFromUrlParam(roleParam);
+    
+    if (!role || !validateRole(role)) {
+      // Si no hay rol válido, redirigir a la página principal
+      router.push('/');
+      return;
+    }
+    
+    setUserRole(role);
+  }, [searchParams, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -18,13 +89,45 @@ export default function SignUp() {
       ...prev,
       [name]: value
     }));
+    
+    // Validar campo en tiempo real
+    validateSingleField(name, value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // La validación ahora se maneja con el hook useFormValidation
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Solo visual - sin implementación lógica
-    console.log("Sign up:", formData);
+    
+    if (!validateForm(formData) || !userRole) {
+      return;
+    }
+
+    try {
+      const signupData: SignupRequest = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: userRole,
+        photoUrl: formData.photoUrl || undefined
+      };
+
+      await signup(signupData);
+      // La redirección se maneja en el contexto de autenticación
+    } catch (error) {
+      console.error("Error en signup:", error);
+      // El error se maneja en el contexto
+    }
   };
+
+  // Mostrar loading mientras se verifica el rol
+  if (!userRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#A19186' }}>
+        <LoadingSpinner size="lg" text="Verificando acceso..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#A19186' }}>
@@ -70,6 +173,16 @@ export default function SignUp() {
                 <p className="text-lg opacity-90">
                   Únete a la comunidad de estudiantes y profesionales que están transformando la educación.
                 </p>
+                {userRole && (
+                  <div className="mt-6 p-4 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <h3 className="text-xl font-semibold mb-2">
+                      Registro como {getRoleLabel(userRole)}
+                    </h3>
+                    <p className="text-sm opacity-90">
+                      {getRoleDescription(userRole)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -98,7 +211,41 @@ export default function SignUp() {
                   </p>
                 </div>
 
+                {/* Mostrar error general si existe */}
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700 text-sm">{getFriendlySignupErrorMessage(error)}</p>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Nombre */}
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre Completo
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
+                          errors.name ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                        }`}
+                        placeholder="Tu nombre completo"
+                        required
+                      />
+                      <div className="absolute right-2 top-2 text-gray-400 text-sm">
+                        👤
+                      </div>
+                    </div>
+                    {errors.name && (
+                      <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                    )}
+                  </div>
+
                   {/* Email */}
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -111,7 +258,9 @@ export default function SignUp() {
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border-b-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-transparent text-sm"
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
+                          errors.email ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                        }`}
                         placeholder="tu.email@universidad.edu"
                         required
                       />
@@ -119,6 +268,9 @@ export default function SignUp() {
                         ✉️
                       </div>
                     </div>
+                    {errors.email && (
+                      <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                    )}
                   </div>
 
                   {/* Contraseña */}
@@ -133,7 +285,9 @@ export default function SignUp() {
                         name="password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border-b-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-transparent text-sm"
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
+                          errors.password ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                        }`}
                         placeholder="••••••••"
                         required
                       />
@@ -141,6 +295,9 @@ export default function SignUp() {
                         🔒
                       </div>
                     </div>
+                    {errors.password && (
+                      <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                    )}
                   </div>
 
                   {/* Confirmar Contraseña */}
@@ -155,7 +312,9 @@ export default function SignUp() {
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border-b-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-transparent text-sm"
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
+                          errors.confirmPassword ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                        }`}
                         placeholder="••••••••"
                         required
                       />
@@ -163,14 +322,81 @@ export default function SignUp() {
                         🔒
                       </div>
                     </div>
+                    {errors.confirmPassword && (
+                      <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
+                    )}
                   </div>
+
+                  {/* Foto de perfil (opcional) */}
+                  <div>
+                    <label htmlFor="photoUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                      Foto de Perfil (opcional)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        id="photoUrl"
+                        name="photoUrl"
+                        value={formData.photoUrl}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
+                          errors.photoUrl ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                        }`}
+                        placeholder="https://ejemplo.com/mi-foto.jpg"
+                      />
+                      <div className="absolute right-2 top-2 text-gray-400 text-sm">
+                        📷
+                      </div>
+                    </div>
+                    {errors.photoUrl && (
+                      <p className="text-red-500 text-xs mt-1">{errors.photoUrl}</p>
+                    )}
+                  </div>
+
+                  {/* Campos adicionales para administradores */}
+                  {userRole === UserRole.ADMIN && (
+                    <>
+                      {/* Teléfono */}
+                      <div>
+                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                          Teléfono
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="tel"
+                            id="phone"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                            className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
+                              errors.phone ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                            }`}
+                            placeholder="+57 300 123 4567"
+                            required
+                          />
+                          <div className="absolute right-2 top-2 text-gray-400 text-sm">
+                            📞
+                          </div>
+                        </div>
+                        {errors.phone && (
+                          <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                        )}
+                      </div>
+
+                    </>
+                  )}
 
                   {/* Botón de registro */}
                   <button
                     type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
+                    disabled={isLoading}
+                    className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm ${
+                      isLoading 
+                        ? 'bg-gray-400 cursor-not-allowed text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
                   >
-                    CREAR CUENTA
+                    {isLoading ? 'CREANDO CUENTA...' : 'CREAR CUENTA'}
                   </button>
                 </form>
 
@@ -194,21 +420,19 @@ export default function SignUp() {
                   <div className="flex-1 border-t border-gray-300"></div>
                 </div>
 
-                {/* Enlace a login de administrador */}
-                <div className="mt-4 text-center">
-                  <Link 
-                    href="/pages/admin-login" 
-                    className="text-xs text-gray-600 hover:text-gray-800 font-medium"
-                  >
-                    ¿Eres administrador?{" "}
-                    <span className="text-blue-600">Inicia sesión aquí</span>
-                  </Link>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignUp() {
+  return (
+    <Suspense fallback={<LoadingSpinner size="lg" text="Cargando formulario..." />}>
+      <SignUpContent />
+    </Suspense>
   );
 }

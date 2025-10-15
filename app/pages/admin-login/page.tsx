@@ -2,14 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useAuth } from "../../contexts/AuthContext";
 import { EXTERNAL_URLS } from "../../config/urls";
+import { getRoleLabel } from "../../utils/roleUtils";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { getFriendlyErrorMessage } from "../../utils/errorMessages";
 
 export default function AdminLogin() {
+  const { login, isLoading, error, logout, user, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false
   });
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -17,13 +23,24 @@ export default function AdminLogin() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Limpiar errores cuando el usuario empiece a escribir
+    if (localError) setLocalError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Aquí se implementará la lógica de autenticación
-    console.log("Login administrador/externo:", formData);
+    setLocalError(null);
+
+    try {
+      await login({
+        email: formData.email,
+        password: formData.password
+      });
+    } catch (error) {
+      setLocalError(getFriendlyErrorMessage(error));
+    }
   };
+
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -51,12 +68,44 @@ export default function AdminLogin() {
               Iniciar Sesión
             </h1>
             <h2 className="text-lg text-yellow-600 font-semibold">
-              Administrador / Externo
+              Administrador / Usuario Externo
             </h2>
             <p className="text-sm text-gray-600 mt-2">
-              Accede a tu cuenta administrativa
+              Accede a tu cuenta
             </p>
           </div>
+
+          {/* Mostrar errores */}
+          {(error || localError) && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">
+                {getFriendlyErrorMessage(error) || localError}
+              </p>
+            </div>
+          )}
+
+
+          {/* Información del usuario si está autenticado */}
+          {isAuthenticated && user && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-green-800">
+                    <strong>Usuario autenticado:</strong> {user.name}
+                  </p>
+                  <p className="text-xs text-green-600">
+                    Email: {user.email} | Rol: {getRoleLabel(user.role)}
+                  </p>
+                </div>
+                <button
+                  onClick={logout}
+                  className="text-sm text-red-600 hover:text-red-800 font-medium underline"
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -73,6 +122,7 @@ export default function AdminLogin() {
                 className="planifika-input"
                 placeholder="admin@planifika.com"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -89,6 +139,7 @@ export default function AdminLogin() {
                 className="planifika-input"
                 placeholder="••••••••"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -116,56 +167,60 @@ export default function AdminLogin() {
 
             <button
               type="submit"
-              className="w-full planifika-button-primary text-base py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              disabled={isLoading}
+              className="w-full planifika-button-primary text-base py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Iniciar Sesión
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Iniciando sesión...</span>
+                </div>
+              ) : (
+                'Iniciar Sesión'
+              )}
             </button>
           </form>
 
-          {/* Información adicional para administradores */}
+          {/* Información adicional */}
           <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
             <div className="flex items-start">
               <div className="text-yellow-600 mr-2">ℹ️</div>
               <div className="text-sm text-yellow-800">
-                <p className="font-medium mb-1">Acceso Administrativo</p>
+                <p className="font-medium mb-1">Tipos de Usuario</p>
                 <p className="text-xs">
-                  Los administradores tienen acceso completo al sistema, 
-                  mientras que los usuarios externos tienen permisos limitados.
+                  <strong>Administradores:</strong> Acceso completo al sistema<br/>
+                  <strong>Usuarios Externos:</strong> Solo pueden crear y gestionar proyectos
                 </p>
               </div>
             </div>
           </div>
 
           {/* Enlaces adicionales */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-600">
-              ¿No tienes cuenta?{" "}
-              <Link 
-                href={EXTERNAL_URLS.MAIN_SYSTEM!} 
-                className="text-yellow-600 hover:text-yellow-700 font-medium"
-              >
-                Solicita acceso
-              </Link>
-            </p>
+          <div className="mt-8 space-y-3 text-center">
+            <div>
+              <p className="text-sm text-gray-600">
+                ¿No tienes cuenta?{" "}
+                <Link 
+                  href={EXTERNAL_URLS.MAIN_SYSTEM!} 
+                  className="text-yellow-600 hover:text-yellow-700 font-medium"
+                >
+                  Regístrate como administrador
+                </Link>
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">
+                ¿Necesitas acceso externo?{" "}
+                <Link 
+                  href="/pages/signup?role=2" 
+                  className="text-yellow-600 hover:text-yellow-700 font-medium"
+                >
+                  Regístrate como usuario externo
+                </Link>
+              </p>
+            </div>
           </div>
 
-          {/* Separador */}
-          <div className="mt-6 flex items-center">
-            <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-3 text-sm text-gray-500">o</span>
-            <div className="flex-1 border-t border-gray-300"></div>
-          </div>
-
-          {/* Enlace a login de estudiante */}
-          <div className="mt-6 text-center">
-            <Link 
-              href="/pages/student-login" 
-              className="text-sm text-gray-600 hover:text-gray-800 font-medium"
-            >
-              ¿Eres estudiante?{" "}
-              <span className="text-yellow-600">Inicia sesión aquí</span>
-            </Link>
-          </div>
           </div>
         </div>
       </div>

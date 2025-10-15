@@ -3,18 +3,19 @@
 import { useState, useRef, useEffect } from "react";
 
 interface Organization {
-  id?: number;
+  IDOrganization?: number;
   nit: string;
   name: string;
   address?: string;
   phone?: string;
   photoURL?: string;
+  domain?: string;
 }
 
 interface OrganizationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (organization: Omit<Organization, 'id'>) => void;
+  onSave: (organization: Omit<Organization, 'IDOrganization'>) => void;
   editingOrganization?: Organization | null;
 }
 
@@ -68,7 +69,8 @@ export default function OrganizationModal({
     name: editingOrganization?.name || "",
     address: editingOrganization?.address || "",
     phone: editingOrganization?.phone || "",
-    photoURL: editingOrganization?.photoURL || ""
+    photoURL: editingOrganization?.photoURL || "",
+    domain: editingOrganization?.domain || ""
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -97,7 +99,8 @@ export default function OrganizationModal({
         name: editingOrganization.name || "",
         address: editingOrganization.address || "",
         phone: editingOrganization.phone || "",
-        photoURL: editingOrganization.photoURL || ""
+        photoURL: editingOrganization.photoURL || "",
+        domain: editingOrganization.domain || ""
       });
     } else {
       setFormData({
@@ -105,7 +108,8 @@ export default function OrganizationModal({
         name: "",
         address: "",
         phone: "",
-        photoURL: ""
+        photoURL: "",
+        domain: ""
       });
     }
   }, [editingOrganization]);
@@ -127,7 +131,7 @@ export default function OrganizationModal({
     
     try {
       await onSave(formData);
-      setFormData({ nit: "", name: "", address: "", phone: "", photoURL: "" });
+      setFormData({ nit: "", name: "", address: "", phone: "", photoURL: "", domain: "" });
       onClose();
     } catch (error) {
       console.error("Error al guardar organización:", error);
@@ -141,7 +145,7 @@ export default function OrganizationModal({
   };
 
   const handleClose = () => {
-    setFormData({ nit: "", name: "", address: "", phone: "", photoURL: "" });
+    setFormData({ nit: "", name: "", address: "", phone: "", photoURL: "", domain: "" });
     setSelectedAuthProvider(null);
     setShowAuthDropdown(false);
     onClose();
@@ -248,6 +252,19 @@ export default function OrganizationModal({
                 onChange={(e) => setFormData({...formData, photoURL: e.target.value})}
                 className="planifika-input"
                 placeholder="https://ejemplo.com/foto.jpg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-black mb-2">
+                Dominio
+              </label>
+              <input
+                type="text"
+                value={formData.domain}
+                onChange={(e) => setFormData({...formData, domain: e.target.value})}
+                className="planifika-input"
+                placeholder="ejemplo.com"
               />
             </div>
 

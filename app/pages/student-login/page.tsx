@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useAuth } from "../../contexts/AuthContext";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { getFriendlyErrorMessage } from "../../utils/errorMessages";
 
 export default function StudentLogin() {
+  const { externalLogin, isLoading, error } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false
   });
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -16,12 +21,22 @@ export default function StudentLogin() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Limpiar errores cuando el usuario empiece a escribir
+    if (localError) setLocalError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Aquí se implementará la lógica de autenticación
-    console.log("Login estudiante:", formData);
+    setLocalError(null);
+
+    try {
+      await externalLogin({
+        email: formData.email,
+        password: formData.password
+      });
+    } catch (error) {
+      setLocalError(getFriendlyErrorMessage(error));
+    }
   };
 
   return (
@@ -57,6 +72,15 @@ export default function StudentLogin() {
             </p>
           </div>
 
+          {/* Mostrar errores */}
+          {(error || localError) && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">
+                {getFriendlyErrorMessage(error) || localError}
+              </p>
+            </div>
+          )}
+
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -72,6 +96,8 @@ export default function StudentLogin() {
                 className="planifika-input"
                 placeholder="tu.email@universidad.edu"
                 required
+                disabled={isLoading}
+                autoComplete="email"
               />
             </div>
 
@@ -88,6 +114,8 @@ export default function StudentLogin() {
                 className="planifika-input"
                 placeholder="••••••••"
                 required
+                disabled={isLoading}
+                autoComplete="current-password"
               />
             </div>
 
@@ -115,9 +143,17 @@ export default function StudentLogin() {
 
             <button
               type="submit"
-              className="w-full planifika-button-primary text-base py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              disabled={isLoading}
+              className="w-full planifika-button-primary text-base py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Iniciar Sesión
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Iniciando sesión...</span>
+                </div>
+              ) : (
+                'Iniciar Sesión'
+              )}
             </button>
           </form>
 
