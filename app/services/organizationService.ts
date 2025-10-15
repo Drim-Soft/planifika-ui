@@ -2,12 +2,13 @@
 import { API_CONFIG, DEFAULT_API_HEADERS } from '../config/api';
 
 export interface Organization {
-  id?: number;
+  IDOrganization?: number;
   nit: string;
   name: string;
   address?: string;
   phone?: string;
   photoURL?: string;
+  domain?: string;
   users?: any[];
 }
 
@@ -74,14 +75,14 @@ class OrganizationService {
     return this.request<Organization>(`/organizations/${id}`);
   }
 
-  async createOrganization(organization: Omit<Organization, 'id'>): Promise<Organization> {
+  async createOrganization(organization: Omit<Organization, 'IDOrganization'>): Promise<Organization> {
     return this.request<Organization>('/organizations', {
       method: 'POST',
       body: JSON.stringify(organization),
     });
   }
 
-  async updateOrganization(id: number, organization: Omit<Organization, 'id'>): Promise<Organization> {
+  async updateOrganization(id: number, organization: Omit<Organization, 'IDOrganization'>): Promise<Organization> {
     return this.request<Organization>(`/organizations/${id}`, {
       method: 'PUT',
       body: JSON.stringify(organization),

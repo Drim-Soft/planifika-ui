@@ -55,7 +55,7 @@ export default function CreateOrganization() {
     }
   };
 
-  const handleCreateOrganization = async (organizationData: Omit<Organization, 'id'>) => {
+  const handleCreateOrganization = async (organizationData: Omit<Organization, 'IDOrganization'>) => {
     try {
       const newOrganization = await organizationService.createOrganization(organizationData);
       setOrganizations([...organizations, newOrganization]);
@@ -71,13 +71,13 @@ export default function CreateOrganization() {
     setIsModalOpen(true);
   };
 
-  const handleUpdateOrganization = async (organizationData: Omit<Organization, 'id'>) => {
-    if (!editingOrg?.id) return;
+  const handleUpdateOrganization = async (organizationData: Omit<Organization, 'IDOrganization'>) => {
+    if (!editingOrg?.IDOrganization) return;
     
     try {
-      const updatedOrganization = await organizationService.updateOrganization(editingOrg.id, organizationData);
+      const updatedOrganization = await organizationService.updateOrganization(editingOrg.IDOrganization, organizationData);
       setOrganizations(organizations.map(org => 
-        org.id === editingOrg.id ? updatedOrganization : org
+        org.IDOrganization === editingOrg.IDOrganization ? updatedOrganization : org
       ));
       setEditingOrg(null);
       console.log("Organización actualizada:", updatedOrganization);
@@ -94,7 +94,7 @@ export default function CreateOrganization() {
 
     try {
       await organizationService.deleteOrganization(id);
-      setOrganizations(organizations.filter(org => org.id !== id));
+      setOrganizations(organizations.filter(org => org.IDOrganization !== id));
       console.log("Organización eliminada:", id);
     } catch (error) {
       console.error("Error al eliminar organización:", error);
@@ -237,7 +237,7 @@ export default function CreateOrganization() {
               ) : (
                 <div className="space-y-4">
                   {organizations.map((org) => (
-                    <div key={org.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200 bg-white/80 backdrop-blur-sm">
+                    <div key={org.IDOrganization} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200 bg-white/80 backdrop-blur-sm">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -251,7 +251,8 @@ export default function CreateOrganization() {
                             {org.phone && <p>📞 {org.phone}</p>}
                           </div>
                           <div className="flex items-center gap-4 text-sm text-gray-700">
-                            <span>🆔 ID: {org.id ? org.id.toString().slice(-8) : 'N/A'}</span>
+                            <span>🆔 ID: {org.IDOrganization ? org.IDOrganization.toString().slice(-8) : 'N/A'}</span>
+                            {org.domain && <span>🌐 {org.domain}</span>}
                             {org.users && <span>👥 {org.users.length} usuarios</span>}
                           </div>
                         </div>
@@ -263,7 +264,7 @@ export default function CreateOrganization() {
                             ✏️ Editar
                           </button>
                           <button
-                            onClick={() => org.id && handleDeleteOrganization(org.id)}
+                            onClick={() => org.IDOrganization && handleDeleteOrganization(org.IDOrganization)}
                             className="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 rounded hover:bg-red-50 transition-colors"
                           >
                             🗑️ Eliminar
