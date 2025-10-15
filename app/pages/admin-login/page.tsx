@@ -6,6 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { EXTERNAL_URLS } from "../../config/urls";
 import { getRoleLabel } from "../../utils/roleUtils";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { getFriendlyErrorMessage } from "../../utils/errorMessages";
 
 export default function AdminLogin() {
   const { login, isLoading, error, logout, user, isAuthenticated } = useAuth();
@@ -36,7 +37,7 @@ export default function AdminLogin() {
         password: formData.password
       });
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Error al iniciar sesión');
+      setLocalError(getFriendlyErrorMessage(error));
     }
   };
 
@@ -78,7 +79,7 @@ export default function AdminLogin() {
           {(error || localError) && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">
-                {error?.message || localError}
+                {getFriendlyErrorMessage(error) || localError}
               </p>
             </div>
           )}

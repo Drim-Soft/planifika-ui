@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../contexts/AuthContext";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { getFriendlyErrorMessage } from "../../utils/errorMessages";
 
 export default function StudentLogin() {
   const { externalLogin, isLoading, error } = useAuth();
@@ -34,7 +35,7 @@ export default function StudentLogin() {
         password: formData.password
       });
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Error al iniciar sesión');
+      setLocalError(getFriendlyErrorMessage(error));
     }
   };
 
@@ -75,7 +76,7 @@ export default function StudentLogin() {
           {(error || localError) && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">
-                {error?.message || localError}
+                {getFriendlyErrorMessage(error) || localError}
               </p>
             </div>
           )}

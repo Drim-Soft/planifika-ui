@@ -10,6 +10,7 @@ import { UserRole, SignupRequest } from "../../types/auth";
 import { getRoleFromUrlParam, getRoleLabel, getRoleDescription, validateRole } from "../../utils/roleUtils";
 import { useFormValidation } from "../../hooks/useFormValidation";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { getFriendlySignupErrorMessage } from "../../utils/errorMessages";
 
 function SignUpContent() {
   const searchParams = useSearchParams();
@@ -213,7 +214,7 @@ function SignUpContent() {
                 {/* Mostrar error general si existe */}
                 {error && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-700 text-sm">{error.message}</p>
+                    <p className="text-red-700 text-sm">{getFriendlySignupErrorMessage(error)}</p>
                   </div>
                 )}
 
