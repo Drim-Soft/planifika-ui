@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import SidebarProfile from "../../components/SidebarProfile";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { getRoleLabel } from "../../utils/roleUtils";
@@ -166,9 +167,11 @@ export default function AcademicDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-50 flex">
+      <SidebarProfile hideEdit roleLabel="Estudiante" dashboardHref="/dashboard/academic" />
+      {/* Contenedor principal */}
+      <div className="flex-1 flex flex-col min-w-0">
+      <header className="bg-white shadow-sm border-b w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-3">
@@ -204,7 +207,7 @@ export default function AcademicDashboard() {
       </header>
 
       {/* Contenido principal */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Bienvenida */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -487,6 +490,7 @@ export default function AcademicDashboard() {
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }

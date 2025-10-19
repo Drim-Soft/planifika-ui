@@ -56,6 +56,22 @@ export interface UserInfoResponse {
   userType?: number; // Agregar userType como campo opcional
 }
 
+// Actualización de perfil (/auth/me PATCH)
+export interface UpdateProfileRequest {
+  name?: string;
+  password?: string;
+  photourl?: string; // Para PATCH /auth/me
+}
+
+export interface UpdateProfileResponse {
+  auth?: Record<string, unknown>;
+  db?: {
+    iduser?: number;
+    name?: string;
+  } | { skipped: boolean };
+  supabaseUserId?: string;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -92,4 +108,5 @@ export interface AuthContextType {
   externalLogin: (data: LoginRequest) => Promise<LoginResponse>;
   logout: () => void;
   error: AuthError | null;
+  updateUser?: (partial: Partial<User>) => void;
 }

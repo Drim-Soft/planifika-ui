@@ -405,7 +405,7 @@ function SignUpContent() {
                   <p className="text-xs text-gray-600">
                     ¿Ya tienes una cuenta?{" "}
                     <Link 
-                      href={EXTERNAL_URLS.MAIN_SYSTEM!} 
+                      href={EXTERNAL_URLS.MAIN_SYSTEM ?? '/'} 
                       className="text-blue-600 hover:text-blue-700 font-medium"
                     >
                       Inicia sesión
@@ -428,6 +428,8 @@ function SignUpContent() {
     </div>
   );
 }
+
+export const dynamic = 'force-dynamic';
 
 export default function SignUp() {
   return (

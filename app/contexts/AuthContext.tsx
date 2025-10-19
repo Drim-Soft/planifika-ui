@@ -336,6 +336,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
   };
 
+  // Permite actualizar parcialmente el usuario en memoria/localStorage
+  const updateUser = (partial: Partial<User>) => {
+    setUser((prev: User | null) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...partial } as User;
+      try {
+        localStorage.setItem('planifika_user', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -345,6 +357,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     externalLogin,
     logout,
     error,
+    updateUser,
   };
 
   return (

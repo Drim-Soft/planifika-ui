@@ -89,12 +89,15 @@ export default function CreateOrganization() {
               </h1>
               <p className="text-gray-600 mt-1">Gestión de Organizaciones</p>
             </div>
-            <Link
-              href="/"
-              className="planifika-button-secondary flex items-center gap-2"
-            >
-              ← Volver al Inicio
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard/profile" className="planifika-button-secondary">Mi Perfil</Link>
+              <Link
+                href="/"
+                className="planifika-button-secondary flex items-center gap-2"
+              >
+                ← Volver al Inicio
+              </Link>
+            </div>
           </div>
         </div>
       </div>
