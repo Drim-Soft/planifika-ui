@@ -74,9 +74,15 @@ class ProjectService {
 
   //  Obtener roles por metodología
   async getRolesByMethodology(methodologyId: number): Promise<Role[]> {
-    return this.request<Role[]>(`/methodologies/${methodologyId}/roles`, { method: 'GET' });
-  }
+    const base = API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL.replace(/\/projects$/, ""); 
+    const url = `${base}/methodologies/${methodologyId}/roles`;
 
+    console.log("🎯 getRolesByMethodology URL:", url);
+
+    return this.request<Role[]>(url.replace(API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL, ""), {
+      method: 'GET',
+    });
+  }
   //  Crear un proyecto
   async createProject(projectData: CreateProjectRequest, userId: number): Promise<Project> {
     console.log(" createProject() ejecutado");

@@ -1,68 +1,146 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { projectService } from "../../../services/projectService";
 
-export default function ProjectEditModal({ project, onClose, onSave }: any) {
-  const [form, setForm] = useState({ ...project });
-  const [users, setUsers] = useState<any[]>([]);
+export default function ProjectEditModal({ project, onClose }: any) {
+  const router = useRouter();
+  const [form, setForm] = useState({
+    name: project.name || "",
+    description: project.description || "",
+    endDate: project.endDate?.slice(0, 10) || "",
+    budget: project.budget || 0,
+    cost: project.cost || 0,
+    percentageProgress: project.percentageProgress || 0,
+    percentageBudgetExecution: project.percentageBudgetExecution || 0,
+    statusName: project.projectStatus?.name || "",
+  });
+
+  const [statuses, setStatuses] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Cargar roles de la metodología del proyecto
-  useEffect(() => {
-    const methodologyId = project.IDMethodologyRef ?? project.idmethodologyref;
-    if (methodologyId) {
-      projectService
-        .getRolesByMethodology(methodologyId)
-        .then((data) => {
-          console.log("Roles de metodología:", data);
-          setRoles(data);
-        })
-        .catch(console.error);
-    }
-  }, [project]);
+  const projectId = project.IDProject ?? project.idproject;
+  const methodologyId =
+    project.IDMethodologyRef ||
+    project.idmethodologyRef ||
+    project.IDMethodology ||
+    project.idmethodology;
 
-  // Obtener usuarios del sistema (ajusta si tienes endpoint diferente)
+  // 🔹 Cargar estados
   useEffect(() => {
     projectService
-      .request<any[]>("/users", { method: "GET" })
-      .then(setUsers)
-      .catch(console.error);
+      .getProjectStatuses()
+      .then((data) => setStatuses(data))
+      .catch((err) => console.error("Error cargando estados:", err));
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  // 🔹 Cargar roles según metodología
+  useEffect(() => {
+    const methodologyId =
+      project.IDMethodologyRef ||
+      project.idmethodologyRef ||
+      project.IDMethodology ||
+      project.idmethodology ||
+      project.methodology?.idmethodology ||
+      project.methodology?.IDMethodology;
+
+    console.log("🧭 Methodology ID detectado:", methodologyId);
+
+    if (!methodologyId) {
+      console.warn("⚠️ No se encontró ID de metodología en el proyecto:", project);
+      return;
+    }
+
+    projectService
+      .getRolesByMethodology(methodologyId)
+      .then((data) => {
+        console.log("✅ Roles cargados:", data);
+        setRoles(data);
+      })
+      .catch((err) => {
+        console.error("❌ Error al obtener roles:", err);
+      });
+  }, [project]);
+
+  // 🔹 Cargar usuarios del proyecto
+  useEffect(() => {
+    if (!projectId) return;
+    projectService
+      .getUsersInProject(projectId)
+      .then((data) => setUsers(data))
+      .catch((err) => console.error("Error cargando usuarios:", err));
+  }, [projectId]);
+
+  const handleChange = (name: string, value: any) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // 🔹 Guardar cambios del proyecto
   const handleSave = async () => {
-    const projectId = project.IDProject ?? project.idproject;
-    console.log("📝 Guardando proyecto:", projectId, form);
+    try {
+      setLoading(true);
 
-    // Evitamos que cambie el estado accidentalmente
-    const cleanData = { ...form };
-    delete (cleanData as any).projectStatus;
+      const payload = {
+        name: form.name,
+        description: form.description,
+        endDate: form.endDate,
+        budget: Number(form.budget),
+        cost: Number(form.cost),
+        percentageProgress: Number(form.percentageProgress),
+        percentageBudgetExecution: Number(form.percentageBudgetExecution),
+        statusName: form.statusName || project.projectStatus?.name,
+      };
 
-    await projectService.updateProject(projectId, cleanData);
-    onSave();
-    onClose();
+      await projectService.updateProject(projectId, payload);
+
+      alert("✅ Proyecto actualizado correctamente");
+
+      // 🔹 Recargar exactamente igual que el de creación
+      onClose();
+      router.push("/dashboard/academic");
+      window.location.reload(); // fuerza actualización total (igual que crear)
+    } catch (err) {
+      console.error(err);
+      alert("❌ Error al actualizar el proyecto");
+    } finally {
+      setLoading(false);
+    }
   };
 
+
+
+
+
+  // 🔹 Asignar usuario
   const handleAssignUser = async () => {
-    if (!selectedUser || !selectedRole) return alert("Selecciona usuario y rol.");
-    const projectId = project.IDProject ?? project.idproject;
-    await projectService.assignUserToProject(projectId, selectedUser, selectedRole);
-    alert("✅ Usuario asignado correctamente");
-    setSelectedUser(null);
-    setSelectedRole(null);
+    if (!selectedUser || !selectedRole) {
+      alert("Selecciona un usuario y un rol.");
+      return;
+    }
+
+    try {
+      await projectService.assignUserToProject(projectId, selectedUser, selectedRole);
+      alert("✅ Usuario asignado correctamente");
+      setSelectedUser(null);
+      setSelectedRole(null);
+
+      // refresca usuarios del proyecto
+      const updated = await projectService.getUsersInProject(projectId);
+      setUsers(updated);
+    } catch (err) {
+      console.error(err);
+      alert("❌ No se pudo asignar el usuario.");
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative">
-        {/* Botón cerrar */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg"
@@ -74,50 +152,63 @@ export default function ProjectEditModal({ project, onClose, onSave }: any) {
           ✏️ Editar Proyecto
         </h2>
 
-        {/* Campos del formulario */}
+        {/* Formulario */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="col-span-2">
             <label className="block text-gray-500 mb-1 font-medium">Nombre</label>
             <input
-              name="name"
-              value={form.name || ""}
-              onChange={handleChange}
+              value={form.name}
+              onChange={(e) => handleChange("name", e.target.value)}
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-yellow-500"
-              placeholder="Nombre del proyecto"
             />
           </div>
 
           <div className="col-span-2">
             <label className="block text-gray-500 mb-1 font-medium">Descripción</label>
             <textarea
-              name="description"
-              value={form.description || ""}
-              onChange={handleChange}
+              value={form.description}
+              onChange={(e) => handleChange("description", e.target.value)}
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-yellow-500"
-              placeholder="Descripción del proyecto"
             />
           </div>
 
           <div>
-            <label className="block text-gray-500 mb-1 font-medium">Fecha de Fin</label>
+            <label className="block text-gray-500 mb-1 font-medium">Fecha Fin</label>
             <input
-              name="endDate"
-              value={form.endDate?.slice(0, 10) || ""}
-              onChange={handleChange}
               type="date"
+              value={form.endDate}
+              onChange={(e) => handleChange("endDate", e.target.value)}
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-yellow-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-gray-500 mb-1 font-medium">Estado</label>
+            <select
+              value={form.statusName}
+              onChange={(e) => handleChange("statusName", e.target.value)}
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-yellow-500"
+            >
+              <option value="">Seleccionar estado</option>
+              {statuses.map((s) => (
+                <option
+                  key={s.IDProjectStatus ?? s.idProjectStatus ?? s.name}
+                  value={s.name}
+                >
+                  {s.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
             <label className="block text-gray-500 mb-1 font-medium">Progreso (%)</label>
             <input
-              name="percentageProgress"
-              value={form.percentageProgress || 0}
-              onChange={handleChange}
               type="number"
               min="0"
               max="100"
+              value={form.percentageProgress}
+              onChange={(e) => handleChange("percentageProgress", e.target.value)}
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-yellow-500"
             />
           </div>
@@ -125,10 +216,9 @@ export default function ProjectEditModal({ project, onClose, onSave }: any) {
           <div>
             <label className="block text-gray-500 mb-1 font-medium">Presupuesto</label>
             <input
-              name="budget"
-              value={form.budget || 0}
-              onChange={handleChange}
               type="number"
+              value={form.budget}
+              onChange={(e) => handleChange("budget", e.target.value)}
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-yellow-500"
             />
           </div>
@@ -136,10 +226,9 @@ export default function ProjectEditModal({ project, onClose, onSave }: any) {
           <div>
             <label className="block text-gray-500 mb-1 font-medium">Costo</label>
             <input
-              name="cost"
-              value={form.cost || 0}
-              onChange={handleChange}
               type="number"
+              value={form.cost}
+              onChange={(e) => handleChange("cost", e.target.value)}
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-yellow-500"
             />
           </div>
@@ -147,12 +236,11 @@ export default function ProjectEditModal({ project, onClose, onSave }: any) {
           <div className="col-span-2">
             <label className="block text-gray-500 mb-1 font-medium">% Ejecución Presupuesto</label>
             <input
-              name="percentageBudgetExecution"
-              value={form.percentageBudgetExecution || 0}
-              onChange={handleChange}
               type="number"
               min="0"
               max="100"
+              value={form.percentageBudgetExecution}
+              onChange={(e) => handleChange("percentageBudgetExecution", e.target.value)}
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-yellow-500"
             />
           </div>
@@ -192,7 +280,7 @@ export default function ProjectEditModal({ project, onClose, onSave }: any) {
             onClick={handleAssignUser}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200"
           >
-            Asignar al Proyecto
+            Asignar Usuario
           </button>
         </div>
 
@@ -206,9 +294,10 @@ export default function ProjectEditModal({ project, onClose, onSave }: any) {
           </button>
           <button
             onClick={handleSave}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+            disabled={loading}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50"
           >
-            Guardar Cambios
+            {loading ? "Guardando..." : "Guardar Cambios"}
           </button>
         </div>
       </div>
