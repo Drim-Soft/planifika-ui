@@ -9,6 +9,10 @@ import { UserRole } from "../../types/auth";
 import { getRoleLabel } from "../../utils/roleUtils";
 import { projectService } from "../../services/projectService";
 import { Project } from "../../types/project";
+import ProjectDetailsModal from "../../components/ProjectDetailsModal";
+import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
+import ProjectEditModal from "./components/ProjectEditModal";
+
 
 
 
@@ -24,6 +28,9 @@ export default function AcademicDashboard() {
     completedProjects: 0,
     pendingTasks: 0
   });
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [editProject, setEditProject] = useState<any>(null);
+  const [deleteProject, setDeleteProject] = useState<any>(null);
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -43,7 +50,6 @@ export default function AcademicDashboard() {
   useEffect(() => {
 
     const loadUserProjects = async () => {
-      console.log("USERRRRRRRR",user);
       if (!user) return;
       
       try {
@@ -341,13 +347,34 @@ export default function AcademicDashboard() {
 
                   {/* Acciones */}
                   <div className="flex space-x-2">
-                    <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200">
-                      Ver Detalles
-                    </button>
-                    <button className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200">
-                      Editar
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => setSelectedProject(project)}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+                      >
+                        Ver Detalles
+                      </button>
+
+                      {typeof user?.role === "string" && user.role.toLowerCase().includes("administrador proyecto") && (
+                        <button
+                          onClick={() => setEditProject(project)}
+                          className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+                        >
+                          Editar
+                        </button>
+                      )}
+
+                      {typeof user?.role === "string" && user.role.toLowerCase().includes("administrador proyecto") && (
+                        <button
+                          onClick={() => setDeleteProject(project)}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+
+
+
                 </div>
               </div>
             ))}
@@ -359,50 +386,92 @@ export default function AcademicDashboard() {
         </div>
 
         {/* Actividad Reciente */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-full">
-                  <div className="text-sm">✅</div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    Completaste el proyecto "Análisis de Datos con Python"
-                  </p>
-                  <p className="text-xs text-gray-500">Hace 2 días</p>
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
+              </div>
+              <div className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-green-100 rounded-full">
+                      <div className="text-sm">✅</div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        Completaste el proyecto "Análisis de Datos con Python"
+                      </p>
+                      <p className="text-xs text-gray-500">Hace 2 días</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <div className="text-sm">📝</div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        Actualizaste el progreso de "Sistema de Gestión Académica"
+                      </p>
+                      <p className="text-xs text-gray-500">Hace 5 días</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <div className="text-sm">➕</div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        Creaste el proyecto "Aplicación Móvil de Tareas"
+                      </p>
+                      <p className="text-xs text-gray-500">Hace 1 semana</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <div className="text-sm">📝</div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    Actualizaste el progreso de "Sistema de Gestión Académica"
-                  </p>
-                  <p className="text-xs text-gray-500">Hace 5 días</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <div className="text-sm">➕</div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    Creaste el proyecto "Aplicación Móvil de Tareas"
-                  </p>
-                  <p className="text-xs text-gray-500">Hace 1 semana</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            </div> {/* ← este cierra totalmente la sección de actividad reciente */}
+
+
+            {/* =========================
+                  Modales de Proyecto
+              ========================= */}
+            {selectedProject && (
+              <ProjectDetailsModal
+                project={selectedProject}
+                onClose={() => setSelectedProject(null)}
+              />
+            )}
+
+            {editProject && (
+              <ProjectEditModal
+                project={editProject}
+                onClose={() => setEditProject(null)}
+                onSave={() => {
+                  projectService.getUserProjects(user.id).then(setUserProjects);
+                }}
+              />
+            )}
+
+            {deleteProject && (
+              <ConfirmDeleteModal
+                project={deleteProject}
+                onClose={() => setDeleteProject(null)}
+                onConfirm={() => {
+                  projectService
+                    .deleteProject(deleteProject.IDProject ?? deleteProject.idproject)
+                    .then(() => {
+                      setUserProjects(prev =>
+                        prev.filter(p => p.IDProject !== deleteProject.IDProject)
+                      );
+                      setDeleteProject(null);
+                    })
+                    .catch(console.error);
+                }}
+              />
+            )}
+
+
+
       </main>
     </div>
   );

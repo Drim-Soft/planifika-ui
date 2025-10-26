@@ -75,19 +75,24 @@ class ProjectService {
   async createProject(projectData: CreateProjectRequest, userId: number): Promise<Project> {
     console.log(" createProject() ejecutado");
     console.log(" BASE_URL:", API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL);
-    console.log(" Payload:", { ...projectData, IDUser: userId });
 
     const payload = {
-      ...projectData,
-      IDUser: userId
+      name: projectData.name,
+      description: projectData.description,
+      methodologyName: projectData.methodologyName,
+      statusName: projectData.statusName,
+      startDate: projectData.startDate,
+      endDate: projectData.endDate,
+      userId: userId  // 👈 aquí aseguramos que se envíe al backend
     };
+
+    console.log("Payload final enviado:", payload);
 
     return this.request<Project>('/projects', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
   }
-
   //  Obtener todos los proyectos
   async getAllProjects(): Promise<Project[]> {
     return this.request<Project[]>('/projects', { method: 'GET' });
@@ -117,6 +122,20 @@ class ProjectService {
   async deleteProject(projectId: number): Promise<void> {
     await this.request<void>(`/projects/${projectId}`, { method: 'DELETE' });
   }
+  // Obtener usuarios asignados a un proyecto
+  async getUsersInProject(projectId: number): Promise<any[]> {
+    return this.request<any[]>(`/projects/${projectId}/users`, { method: 'GET' });
+  }
+
+  // Asignar usuario a proyecto con un rol
+  async assignUserToProject(projectId: number, idUser: number, idRole: number): Promise<string> {
+    return this.request<string>(`/projects/${projectId}/users`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ IDUser: idUser, IDRole: idRole }),
+    });
+  }
+
 }
 
 export const projectService = new ProjectService();
