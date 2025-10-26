@@ -93,12 +93,12 @@ class ProjectService {
     return this.request<Project[]>('/projects', { method: 'GET' });
   }
 
-  //  Obtener proyectos de un usuario
+
+  // Obtener proyectos de un usuario
   async getUserProjects(userId: number): Promise<Project[]> {
-    const allProjects = await this.getAllProjects();
-    // Filtramos localmente mientras no tengamos endpoint dedicado
-    return allProjects.filter(p => (p as any).createdBy === userId);
+    return this.request<Project[]>(`/projects/user/${userId}`, { method: 'GET' });
   }
+
 
   //  Obtener un proyecto por ID
   async getProjectById(projectId: number): Promise<Project> {

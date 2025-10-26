@@ -257,7 +257,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Crear objeto usuario con información básica
       const userData: User = {
-        id: 0, // ID temporal, se actualizará cuando se cree el usuario en la BD
+        id: 1, // ID temporal, se actualizará cuando se cree el usuario en la BD
         name: formatEmailToName(data.email), // Convertir email a nombre legible
         email: data.email,
         photoUrl: '',
