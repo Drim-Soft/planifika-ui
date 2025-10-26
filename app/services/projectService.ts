@@ -4,54 +4,60 @@ import { Project, Methodology, ProjectStatus, CreateProjectRequest, Role } from 
 
 class ProjectService {
   // Reutilizamos la misma función de request que en authService
+  
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}${endpoint}`;
-    
-    const config: RequestInit = {
-      headers: {
-        ...DEFAULT_API_HEADERS,
-        ...options.headers,
-      },
-      signal: AbortSignal.timeout(API_CONFIG_PROJECTS_PLANIFIKA.TIMEOUT),
-      ...options,
-    };
+  const url = `${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}${endpoint}`;
+  
+  const config: RequestInit = {
+    headers: {
+      ...DEFAULT_API_HEADERS,
+      ...options.headers,
+    },
+    signal: AbortSignal.timeout(API_CONFIG_PROJECTS_PLANIFIKA.TIMEOUT),
+    ...options,
+  };
 
-    try {
-      const response = await fetch(url, config);
+  try {
+    const response = await fetch(url, config);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `Error del servidor: ${response.status}`;
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorData.message || errorMessage;
-        } catch {
-          errorMessage = errorText || errorMessage;
-        }
-        
-        throw new Error(errorMessage);
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `Error del servidor: ${response.status}`;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
       }
-
-      // Si no hay contenido (DELETE por ejemplo)
-      if (response.status === 204) return {} as T;
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error al conectar con Projects API:', error);
-
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté en ${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}`);
-      }
-
-      if (error instanceof Error && error.name === 'TimeoutError') {
-        throw new Error('La solicitud tardó demasiado tiempo. El servidor puede estar sobrecargado o no disponible.');
-      }
-
-      throw error;
+      
+      throw new Error(errorMessage);
     }
-  }
 
+    // 🔧 NUEVO manejo robusto para respuestas
+    if (response.status === 204) return {} as T;
+
+    const text = await response.text();
+    try {
+      return JSON.parse(text); // Si es JSON válido
+    } catch {
+      return text as unknown as T; // Si es texto plano (como "Project logically deleted")
+    }
+
+  } catch (error) {
+    console.error('Error al conectar con Projects API:', error);
+
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté en ${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}`);
+    }
+
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new Error('La solicitud tardó demasiado tiempo. El servidor puede estar sobrecargado o no disponible.');
+    }
+
+    throw error;
+  }
+}
   // =============================
   //  Endpoints del backend
   // =============================

@@ -13,7 +13,43 @@ import ProjectDetailsModal from "../../components/ProjectDetailsModal";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 import ProjectEditModal from "./components/ProjectEditModal";
 
+// ==========================
+// Helpers globales de rol
+// ==========================
+const normalizeStr = (val: unknown) =>
+  String(val ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+const hasAdminProjectRole = (role: unknown, realRoleId?: number) => {
+  try {
+    // Caso 1: si tenemos el rol real obtenido de BD
+    if (typeof realRoleId === "number") {
+      const adminIds = [21, 22, 23, 24];
+      return adminIds.includes(realRoleId);
+    }
 
+    // Caso 2: si es un número (viene del backend)
+    if (typeof role === "number") {
+      const adminIds = [21, 22, 23, 24];
+      return adminIds.includes(role);
+    }
+
+    // Caso 3: si es texto u objeto
+    const raw =
+      typeof role === "string"
+        ? role
+        : (role as any)?.name ?? (role as any)?.rolename ?? "";
+    const normalized = raw.trim().toLowerCase();
+    return normalized.includes("administrador proyecto");
+  } catch {
+    return false;
+  }
+};
+
+
+const getStatusName = (p: any) => (p?.projectStatus?.name as string) || "";
 
 
 export default function AcademicDashboard() {
@@ -54,51 +90,55 @@ export default function AcademicDashboard() {
       
       try {
         setIsLoadingProjects(true);
-        
-        const projects = await projectService.getUserProjects(user.id);
-        console.log("Proyectos devueltos por API:", projects);
 
-  
-        const normalized = projects.map((p: any) => ({
-          ...p,
-          IDProject: p.IDProject ?? p.idproject,
-          IDMethodologyRef: p.IDMethodologyRef ?? p.idmethodologyRef,
-          IDProjectStatusRef: p.IDProjectStatusRef ?? p.idprojectStatusRef,
-          methodology: p.methodology
-            ? {
-                ...p.methodology,
-                IDMethodology: p.methodology.IDMethodology ?? p.methodology.idmethodology
-              }
-            : null,
-          projectStatus: p.projectStatus
-            ? {
-                ...p.projectStatus,
-                IDProjectStatus:
-                  p.projectStatus.IDProjectStatus ?? p.projectStatus.idprojectStatus
-              }
-            : null
-        }));
+const projects = await projectService.getUserProjects(user.id);
+console.log("Proyectos devueltos por API:", projects);
 
-     
-        const filteredProjects = normalized.filter(
-          (p) => p.projectStatus?.name?.toLowerCase() !== "eliminado"
-        );
+const normalized = projects.map((p: any) => ({
+  ...p,
+  IDProject: p.IDProject ?? p.idproject,
+  IDMethodologyRef: p.IDMethodologyRef ?? p.idmethodologyRef,
+  IDProjectStatusRef: p.IDProjectStatusRef ?? p.idprojectStatusRef,
+  methodology: p.methodology
+    ? {
+        ...p.methodology,
+        IDMethodology: p.methodology.IDMethodology ?? p.methodology.idmethodology,
+      }
+    : null,
+  projectStatus: p.projectStatus
+    ? {
+        ...p.projectStatus,
+        IDProjectStatus:
+          p.projectStatus.IDProjectStatus ?? p.projectStatus.idprojectStatus,
+      }
+    : null,
+}));
 
+const filteredProjects = normalized.filter(
+  (p) => p.projectStatus?.name?.toLowerCase() !== "eliminado"
+);
 
-        const uniqueProjects = filteredProjects.filter(
-          (project, index, self) =>
-            index === self.findIndex((p) => p.IDProject === project.IDProject)
-        );
+const uniqueProjects = filteredProjects.filter(
+  (project, index, self) =>
+    index === self.findIndex((p) => p.IDProject === project.IDProject)
+);
 
-        setUserProjects(uniqueProjects);
-                
+// 🔐 rol por proyecto
+const projectsWithRoles = await Promise.all(
+  uniqueProjects.map(async (proj) => {
+    try {
+      const usersInProject = await projectService.getUsersInProject(proj.IDProject);
+      const myUser = usersInProject.find((u: any) => u.iduser === user.id);
+      return { ...proj, userRoleId: myUser?.idrole ?? null };
+    } catch (err) {
+      console.warn(`No se pudo cargar roles para proyecto ${proj.IDProject}`, err);
+      return { ...proj, userRoleId: null };
+    }
+  })
+);
 
-
-
-
-
-
-      } catch (err) {
+setUserProjects(projectsWithRoles);
+      }catch (err) {
         console.error('Error loading user projects:', err);
       } finally {
         setIsLoadingProjects(false);
@@ -112,18 +152,31 @@ export default function AcademicDashboard() {
 
   // Calcular estadísticas
   useEffect(() => {
-    const total = projects.length;
-    const active = projects.filter(p => p.status === "En Progreso").length;
-    const completed = projects.filter(p => p.status === "Completado").length;
-    const pending = projects.filter(p => p.status === "Pendiente").length;
+    if (!userProjects || userProjects.length === 0) return;
+
+    const total = userProjects.length;
+    const active = userProjects.filter(
+      (p) =>
+        p.projectStatus?.name?.trim().toLowerCase() === "en progreso"
+    ).length;
+    const completed = userProjects.filter(
+      (p) =>
+        p.projectStatus?.name?.trim().toLowerCase() === "completado"
+    ).length;
+    const pending = userProjects.filter(
+      (p) =>
+        p.projectStatus?.name?.trim().toLowerCase() === "pendiente"
+    ).length;
 
     setStats({
       totalProjects: total,
       activeProjects: active,
       completedProjects: completed,
-      pendingTasks: pending
+      pendingTasks: pending,
     });
-  }, [projects]);
+  }, [userProjects]);
+
+
 
   // Navegar a crear nuevo proyecto
   const handleCreateNewProject = () => {
@@ -346,34 +399,40 @@ export default function AcademicDashboard() {
                   )}
 
                   {/* Acciones */}
-                  <div className="flex space-x-2">
-                      <button
-                        onClick={() => setSelectedProject(project)}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
-                      >
-                        Ver Detalles
-                      </button>
+<div className="flex space-x-2">
+  {/* Ver Detalles */}
+  <button
+    onClick={() => setSelectedProject(project)}
+    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+  >
+    Ver Detalles
+  </button>
 
-                      {typeof user?.role === "string" && user.role.toLowerCase().includes("administrador proyecto") && (
-                        <button
-                          onClick={() => setEditProject(project)}
-                          className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
-                        >
-                          Editar
-                        </button>
-                      )}
+  {/* Solo si es admin se muestran los botones de editar/eliminar */}
+  {hasAdminProjectRole(user?.role, project?.userRoleId) && (
+    <>
+      <button
+        onClick={() => {
+          console.log("✏️ Editar proyecto", project.IDProject);
+          setEditProject(project);
+        }}
+        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+      >
+        Editar
+      </button>
 
-                      {typeof user?.role === "string" && user.role.toLowerCase().includes("administrador proyecto") && (
-                        <button
-                          onClick={() => setDeleteProject(project)}
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
-                        >
-                          Eliminar
-                        </button>
-                      )}
-                    </div>
-
-
+      <button
+        onClick={() => {
+          console.log("🗑️ Eliminar proyecto", project.IDProject);
+          setDeleteProject(project);
+        }}
+        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+      >
+        Eliminar
+      </button>
+    </>
+  )}
+</div>
 
                 </div>
               </div>

@@ -92,3 +92,31 @@ export function getDefaultRouteForRole(role: UserRole): string {
       return '/dashboard';
   }
 }
+
+// app/utils/roleUtils.ts
+
+export const hasAdminProjectRole = (role: unknown, realRoleId?: number): boolean => {
+  try {
+    const adminIds = [21, 22, 23, 24];
+
+    // Caso 1: rol real numérico (viene de la BD)
+    if (typeof realRoleId === "number") {
+      return adminIds.includes(realRoleId);
+    }
+
+    // Caso 2: rol numérico general
+    if (typeof role === "number") {
+      return adminIds.includes(role);
+    }
+
+    // Caso 3: texto u objeto (por si viene con nombre)
+    const raw =
+      typeof role === "string"
+        ? role
+        : (role as any)?.name ?? (role as any)?.rolename ?? "";
+    const normalized = raw.trim().toLowerCase();
+    return normalized.includes("administrador proyecto");
+  } catch {
+    return false;
+  }
+};
