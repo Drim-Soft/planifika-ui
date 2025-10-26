@@ -134,15 +134,20 @@ export default function CreateAcademicProject() {
     setSuccess(null);
 
     try {
+
+
       const projectData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
         startDate: formData.startDate,
         endDate: formData.endDate,
         budget: formData.budget ? Number(formData.budget) : undefined,
-        IDMethodologyRef: Number(formData.methodology),
-        IDProjectStatusRef: Number(formData.status)
+        methodologyName: formData.methodology,
+        statusName: formData.status,
+        IDUser: user.id,
       };
+
+      console.log("Payload final a enviar:", projectData);
 
       const newProject = await projectService.createProject(projectData, user.id);
       
@@ -358,10 +363,31 @@ export default function CreateAcademicProject() {
               </p>
             </div>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             {/* Metodología */}
             <div>
               <label htmlFor="methodology" className="block text-sm font-medium text-gray-700 mb-2">
-                Metodología de Desarrollo *
+                Metodología *
               </label>
               <select
                 id="methodology"
@@ -372,18 +398,24 @@ export default function CreateAcademicProject() {
                 }`}
               >
                 <option value="">Selecciona una metodología</option>
-                {methodologies.map((methodology) => (
-                  <option key={methodology.IDMethodology} value={methodology.IDMethodology}>
-                    {methodology.name}
-                  </option>
-                ))}
+                {methodologies.map((m: any) => {
+                  const mid =
+                    m.IDMethodology ??
+                    m.idMethodology ??
+                    m.idmethodology ??
+                    m.id;
+
+                  return (
+                    <option key={mid} value={m.name}>
+                      {m.name}
+                    </option>
+
+                  );
+                })}
               </select>
               {formErrors.methodology && (
                 <p className="mt-1 text-sm text-red-600">{formErrors.methodology}</p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
-                Selecciona la metodología que utilizarás para desarrollar tu proyecto
-              </p>
             </div>
 
             {/* Estado del proyecto */}
@@ -400,19 +432,29 @@ export default function CreateAcademicProject() {
                 }`}
               >
                 <option value="">Selecciona un estado</option>
-                {projectStatuses.map((status) => (
-                  <option key={status.IDProjectStatus} value={status.IDProjectStatus}>
-                    {status.name}
-                  </option>
-                ))}
+                {projectStatuses.map((s: any) => {
+                  const sid =
+                    s.IDProjectStatus ??
+                    s.idProjectStatus ??
+                    s.id_project_status ??
+                    s.id;
+
+                  return (
+                    <option key={sid} value={s.name}>
+                      {s.name}
+                    </option>
+
+                  );
+                })}
               </select>
               {formErrors.status && (
                 <p className="mt-1 text-sm text-red-600">{formErrors.status}</p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
-                Define el estado inicial de tu proyecto
-              </p>
             </div>
+
+
+
+
 
             {/* Botones de acción */}
             <div className="flex gap-4 pt-6">

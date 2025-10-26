@@ -49,9 +49,11 @@ export interface CreateProjectRequest {
   startDate: string;
   endDate: string;
   budget?: number;
-  IDMethodologyRef: number;
-  IDProjectStatusRef: number;
+  methodologyName?: string | null;
+  statusName?: string | null;
 }
+
+
 
 export interface ProjectFormData {
   name: string;
