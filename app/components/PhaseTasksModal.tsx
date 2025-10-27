@@ -14,18 +14,17 @@ interface PhaseTasksModalProps {
 }
 
 export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhaseDeleted }: PhaseTasksModalProps) {
-  console.log("🚀 PhaseTasksModal montado con:", { 
-    phase: phase, 
-    hasOnPhaseUpdated: !!onPhaseUpdated, 
-    hasOnPhaseDeleted: !!onPhaseDeleted 
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: phase.name,
+    description: phase.description || '',
+    startDate: phase.startDate || '',
+    endDate: phase.endDate || '',
+    budget: phase.budget || 0,
+    cost: phase.cost || 0
   });
-  
-  // Debug: Verificar todos los campos de la fase
-  console.log("🔍 Estructura completa de la fase:", JSON.stringify(phase, null, 2));
-  console.log("🔍 Campos disponibles:", Object.keys(phase));
-  console.log("🔍 ID de fase (idphase):", (phase as any).idphase, "Tipo:", typeof (phase as any).idphase);
-  console.log("🔍 ID de fase (idPhase):", phase.idPhase, "Tipo:", typeof phase.idPhase);
-  console.log("🔍 ID de fase (IDPhase):", phase.IDPhase, "Tipo:", typeof phase.IDPhase);
 
   // Función auxiliar para obtener el ID de la fase
   const getPhaseId = (): number | null => {
@@ -40,27 +39,8 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
     ];
     
     const validId = possibleIds.find(id => id !== null && id !== undefined && typeof id === 'number' && id > 0);
-    console.log("🔍 IDs posibles:", possibleIds, "ID válido:", validId);
-    
-    if (!validId) {
-      console.error("❌ No se encontró ningún ID válido en la fase");
-      console.error("❌ Estructura completa:", phase);
-    }
-    
     return validId || null;
   };
-
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: phase.name,
-    description: phase.description || '',
-    startDate: phase.startDate || '',
-    endDate: phase.endDate || '',
-    budget: phase.budget || 0,
-    cost: phase.cost || 0
-  });
 
   // Cargar tareas de la fase
   useEffect(() => {
@@ -151,7 +131,6 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
   // Funciones para manejar la edición y eliminación de fases
   const handleEditPhase = async () => {
     const phaseId = getPhaseId();
-    console.log("🔧 handleEditPhase llamado", { phaseId, editForm });
     
     if (!phaseId) {
       console.error("❌ No hay ID de fase para editar");
@@ -161,9 +140,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
     
     try {
       setLoading(true);
-      console.log("📤 Enviando datos al backend:", editForm);
       const updatedPhase = await phaseService.updatePhase(phaseId, editForm);
-      console.log("✅ Fase actualizada:", updatedPhase);
       
       onPhaseUpdated?.(updatedPhase);
       setIsEditing(false);
@@ -178,7 +155,6 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
 
   const handleDeletePhase = async () => {
     const phaseId = getPhaseId();
-    console.log("🗑️ handleDeletePhase llamado", { phaseId, phaseName: phase.name });
     
     if (!phaseId) {
       console.error("❌ No hay ID de fase para eliminar");
@@ -189,15 +165,12 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
     const confirmDelete = confirm(`¿Estás seguro de que quieres eliminar la fase "${phase.name}"?\n\nEsta acción marcará la fase como eliminada (borrado lógico).`);
     
     if (!confirmDelete) {
-      console.log("❌ Usuario canceló la eliminación");
       return;
     }
     
     try {
       setLoading(true);
-      console.log("📤 Eliminando fase:", phaseId);
       await phaseService.deletePhase(phaseId);
-      console.log("✅ Fase eliminada exitosamente");
       
       onPhaseDeleted?.(phaseId);
       alert("✅ Fase eliminada correctamente");
@@ -244,36 +217,16 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
           
           {/* Botones de acción para la fase */}
           <div className="flex gap-2 ml-4">
-            {/* Botón de debug temporal */}
-            <button
-              onClick={() => {
-                console.log("🔍 DEBUG - Información completa de la fase:");
-                console.log("Fase completa:", phase);
-                console.log("Campos:", Object.keys(phase));
-                console.log("ID encontrado:", getPhaseId());
-                alert(`Debug: ID encontrado = ${getPhaseId()}\nCampos disponibles: ${Object.keys(phase).join(', ')}`);
-              }}
-              className="bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded text-xs transition-all duration-200"
-            >
-              🔍 Debug
-            </button>
-            
             {!isEditing ? (
               <>
                 <button
-                  onClick={() => {
-                    console.log("✏️ Botón Editar Fase clickeado");
-                    setIsEditing(true);
-                  }}
+                  onClick={() => setIsEditing(true)}
                   className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-1"
                 >
                   ✏️ Editar Fase
                 </button>
                 <button
-                  onClick={() => {
-                    console.log("🗑️ Botón Eliminar Fase clickeado");
-                    handleDeletePhase();
-                  }}
+                  onClick={handleDeletePhase}
                   className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-1"
                 >
                   🗑️ Eliminar Fase
@@ -282,20 +235,14 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
             ) : (
               <>
                 <button
-                  onClick={() => {
-                    console.log("💾 Botón Guardar clickeado");
-                    handleEditPhase();
-                  }}
+                  onClick={handleEditPhase}
                   disabled={loading}
                   className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-1"
                 >
                   {loading ? "⏳" : "💾"} Guardar
                 </button>
                 <button
-                  onClick={() => {
-                    console.log("❌ Botón Cancelar clickeado");
-                    handleCancelEdit();
-                  }}
+                  onClick={handleCancelEdit}
                   disabled={loading}
                   className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-1"
                 >
@@ -319,7 +266,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="Nombre de la fase"
                   required
                 />
@@ -332,7 +279,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
                 <textarea
                   value={editForm.description}
                   onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   rows={2}
                   placeholder="Descripción de la fase"
                 />
@@ -346,7 +293,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
                   type="date"
                   value={editForm.startDate}
                   onChange={(e) => setEditForm({...editForm, startDate: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                 />
               </div>
               
@@ -358,7 +305,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
                   type="date"
                   value={editForm.endDate}
                   onChange={(e) => setEditForm({...editForm, endDate: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                 />
               </div>
               
@@ -372,7 +319,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
                   step="0.01"
                   value={editForm.budget}
                   onChange={(e) => setEditForm({...editForm, budget: parseFloat(e.target.value) || 0})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="0.00"
                 />
               </div>
@@ -387,7 +334,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
                   step="0.01"
                   value={editForm.cost}
                   onChange={(e) => setEditForm({...editForm, cost: parseFloat(e.target.value) || 0})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="0.00"
                 />
               </div>
