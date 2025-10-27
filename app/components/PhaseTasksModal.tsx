@@ -5,6 +5,7 @@ import { taskService } from "../services/taskService";
 import { phaseService } from "../services/phaseService";
 import { Task } from "@/app/types/task";
 import { Phase } from "@/app/types/phase";
+import CreateTaskModal from "./CreateTaskModal";
 
 interface PhaseTasksModalProps {
   phase: Phase;
@@ -17,6 +18,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [editForm, setEditForm] = useState({
     name: phase.name,
     description: phase.description || '',
@@ -193,6 +195,28 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
       cost: phase.cost || 0
     });
     setIsEditing(false);
+  };
+
+  // Función para manejar la creación de una nueva tarea
+  const handleTaskCreated = (newTask: Task) => {
+    setTasks(prev => [...prev, newTask]);
+    setShowCreateTaskModal(false);
+  };
+
+  // Función para recargar las tareas
+  const reloadTasks = async () => {
+    const phaseId = getPhaseId();
+    if (!phaseId) return;
+    
+    try {
+      setLoading(true);
+      const phaseTasks = await taskService.getTasksByPhase(phaseId);
+      setTasks(phaseTasks);
+    } catch (err) {
+      console.error("Error recargando tareas:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -378,7 +402,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
               Tareas ({tasks.length})
             </h3>
             <button
-              onClick={() => alert("Funcionalidad de crear tarea próximamente")}
+              onClick={() => setShowCreateTaskModal(true)}
               className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded-lg transition-colors duration-200"
             >
               ➕ Nueva Tarea
@@ -487,6 +511,16 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
           </button>
         </div>
       </div>
+
+      {/* Modal para crear nueva tarea */}
+      {showCreateTaskModal && (
+        <CreateTaskModal
+          phaseId={getPhaseId() || 0}
+          phaseName={phase.name}
+          onClose={() => setShowCreateTaskModal(false)}
+          onTaskCreated={handleTaskCreated}
+        />
+      )}
     </div>
   );
 }

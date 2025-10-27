@@ -63,7 +63,7 @@ class TaskService {
 
   // Obtener tareas por fase
   async getTasksByPhase(phaseId: number): Promise<Task[]> {
-    return this.request<Task[]>(`/tasks/phase/${phaseId}`, { method: 'GET' });
+    return this.request<Task[]>(`/tasks/phase?phaseId=${phaseId}`, { method: 'GET' });
   }
 
   // Obtener una tarea por ID
@@ -78,6 +78,49 @@ class TaskService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+  }
+
+  // Crear una tarea con archivo adjunto
+  async createTaskWithFile(formData: FormData): Promise<Task> {
+    const url = `${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}/tasks/create-with-file`;
+    
+    const config: RequestInit = {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(API_CONFIG_PROJECTS_PLANIFIKA.TIMEOUT),
+    };
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Error del servidor: ${response.status}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error al crear tarea con archivo:', error);
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté en ${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}`);
+      }
+      
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        throw new Error('La solicitud tardó demasiado tiempo. El servidor puede estar sobrecargado o no disponible.');
+      }
+      
+      throw error;
+    }
   }
 
   // Actualizar una tarea existente
