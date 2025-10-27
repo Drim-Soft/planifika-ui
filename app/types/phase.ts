@@ -1,5 +1,7 @@
 export interface Phase {
-  idPhase?: number;
+  idphase?: number; // Campo real del backend (minúsculas)
+  IDPhase?: number; // Campo del modelo Java
+  idPhase?: number; // Compatibilidad con frontend
   name: string;
   description?: string;
   startDate?: string;

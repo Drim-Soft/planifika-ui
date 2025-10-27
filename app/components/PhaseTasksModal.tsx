@@ -2,26 +2,78 @@
 
 import { useEffect, useState } from "react";
 import { taskService } from "../services/taskService";
+import { phaseService } from "../services/phaseService";
 import { Task } from "@/app/types/task";
 import { Phase } from "@/app/types/phase";
 
 interface PhaseTasksModalProps {
   phase: Phase;
   onClose: () => void;
+  onPhaseUpdated?: (updatedPhase: Phase) => void;
+  onPhaseDeleted?: (phaseId: number) => void;
 }
 
-export default function PhaseTasksModal({ phase, onClose }: PhaseTasksModalProps) {
+export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhaseDeleted }: PhaseTasksModalProps) {
+  console.log("🚀 PhaseTasksModal montado con:", { 
+    phase: phase, 
+    hasOnPhaseUpdated: !!onPhaseUpdated, 
+    hasOnPhaseDeleted: !!onPhaseDeleted 
+  });
+  
+  // Debug: Verificar todos los campos de la fase
+  console.log("🔍 Estructura completa de la fase:", JSON.stringify(phase, null, 2));
+  console.log("🔍 Campos disponibles:", Object.keys(phase));
+  console.log("🔍 ID de fase (idphase):", (phase as any).idphase, "Tipo:", typeof (phase as any).idphase);
+  console.log("🔍 ID de fase (idPhase):", phase.idPhase, "Tipo:", typeof phase.idPhase);
+  console.log("🔍 ID de fase (IDPhase):", phase.IDPhase, "Tipo:", typeof phase.IDPhase);
+
+  // Función auxiliar para obtener el ID de la fase
+  const getPhaseId = (): number | null => {
+    // Incluir todas las variaciones posibles del campo ID
+    const possibleIds = [
+      (phase as any).idphase, // Campo real del backend (minúsculas)
+      phase.IDPhase, // Campo del modelo Java
+      phase.idPhase, // Compatibilidad con frontend
+      (phase as any).id,
+      (phase as any).phaseId,
+      (phase as any).phase_id
+    ];
+    
+    const validId = possibleIds.find(id => id !== null && id !== undefined && typeof id === 'number' && id > 0);
+    console.log("🔍 IDs posibles:", possibleIds, "ID válido:", validId);
+    
+    if (!validId) {
+      console.error("❌ No se encontró ningún ID válido en la fase");
+      console.error("❌ Estructura completa:", phase);
+    }
+    
+    return validId || null;
+  };
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: phase.name,
+    description: phase.description || '',
+    startDate: phase.startDate || '',
+    endDate: phase.endDate || '',
+    budget: phase.budget || 0,
+    cost: phase.cost || 0
+  });
 
   // Cargar tareas de la fase
   useEffect(() => {
     const loadTasks = async () => {
-      if (!phase.idPhase) return;
+      const phaseId = getPhaseId();
+      if (!phaseId) {
+        console.log("⚠️ No se puede cargar tareas: ID de fase no válido");
+        return;
+      }
       
       try {
         setLoading(true);
-        const phaseTasks = await taskService.getTasksByPhase(phase.idPhase);
+        const phaseTasks = await taskService.getTasksByPhase(phaseId);
         setTasks(phaseTasks);
       } catch (err) {
         console.error("Error cargando tareas:", err);
@@ -61,7 +113,7 @@ export default function PhaseTasksModal({ phase, onClose }: PhaseTasksModalProps
     };
 
     loadTasks();
-  }, [phase.idPhase]);
+  }, [phase]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -96,6 +148,80 @@ export default function PhaseTasksModal({ phase, onClose }: PhaseTasksModalProps
     return "bg-red-500";
   };
 
+  // Funciones para manejar la edición y eliminación de fases
+  const handleEditPhase = async () => {
+    const phaseId = getPhaseId();
+    console.log("🔧 handleEditPhase llamado", { phaseId, editForm });
+    
+    if (!phaseId) {
+      console.error("❌ No hay ID de fase para editar");
+      alert("❌ Error: No se puede identificar la fase a editar");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log("📤 Enviando datos al backend:", editForm);
+      const updatedPhase = await phaseService.updatePhase(phaseId, editForm);
+      console.log("✅ Fase actualizada:", updatedPhase);
+      
+      onPhaseUpdated?.(updatedPhase);
+      setIsEditing(false);
+      alert("✅ Fase actualizada correctamente");
+    } catch (error) {
+      console.error("❌ Error actualizando fase:", error);
+      alert(`❌ Error al actualizar la fase: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePhase = async () => {
+    const phaseId = getPhaseId();
+    console.log("🗑️ handleDeletePhase llamado", { phaseId, phaseName: phase.name });
+    
+    if (!phaseId) {
+      console.error("❌ No hay ID de fase para eliminar");
+      alert("❌ Error: No se puede identificar la fase a eliminar");
+      return;
+    }
+    
+    const confirmDelete = confirm(`¿Estás seguro de que quieres eliminar la fase "${phase.name}"?\n\nEsta acción marcará la fase como eliminada (borrado lógico).`);
+    
+    if (!confirmDelete) {
+      console.log("❌ Usuario canceló la eliminación");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log("📤 Eliminando fase:", phaseId);
+      await phaseService.deletePhase(phaseId);
+      console.log("✅ Fase eliminada exitosamente");
+      
+      onPhaseDeleted?.(phaseId);
+      alert("✅ Fase eliminada correctamente");
+      onClose();
+    } catch (error) {
+      console.error("❌ Error eliminando fase:", error);
+      alert(`❌ Error al eliminar la fase: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditForm({
+      name: phase.name,
+      description: phase.description || '',
+      startDate: phase.startDate || '',
+      endDate: phase.endDate || '',
+      budget: phase.budget || 0,
+      cost: phase.cost || 0
+    });
+    setIsEditing(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl relative max-h-[90vh] overflow-y-auto">
@@ -106,42 +232,197 @@ export default function PhaseTasksModal({ phase, onClose }: PhaseTasksModalProps
           ✖
         </button>
 
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          📋 Tareas de "{phase.name}"
-        </h2>
-        <p className="text-gray-500 mb-6 text-sm">
-          {phase.description || "Sin descripción"}
-        </p>
-
-        {/* Información de la fase */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-6 p-4 bg-gray-50 rounded-lg">
-          <div>
-            <p className="text-gray-500 font-medium">📊 Progreso</p>
-            <p className="text-gray-800">{phase.percentageProgress || 0}%</p>
-          </div>
-          <div>
-            <p className="text-gray-500 font-medium">📅 Inicio</p>
-            <p className="text-gray-800">
-              {phase.startDate ? new Date(phase.startDate).toLocaleDateString("es-ES") : "N/A"}
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              📋 Tareas de "{phase.name}"
+            </h2>
+            <p className="text-gray-500 text-sm">
+              {phase.description || "Sin descripción"}
             </p>
           </div>
-          <div>
-            <p className="text-gray-500 font-medium">🏁 Fin</p>
-            <p className="text-gray-800">
-              {phase.endDate ? new Date(phase.endDate).toLocaleDateString("es-ES") : "N/A"}
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-500 font-medium">📈 Estado</p>
-            <span className={`px-2 py-1 rounded text-xs ${
-              phase.phaseStatus?.name === 'Activa' ? 'bg-green-100 text-green-800' :
-              phase.phaseStatus?.name === 'Completada' ? 'bg-blue-100 text-blue-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {phase.phaseStatus?.name || "Sin estado"}
-            </span>
+          
+          {/* Botones de acción para la fase */}
+          <div className="flex gap-2 ml-4">
+            {/* Botón de debug temporal */}
+            <button
+              onClick={() => {
+                console.log("🔍 DEBUG - Información completa de la fase:");
+                console.log("Fase completa:", phase);
+                console.log("Campos:", Object.keys(phase));
+                console.log("ID encontrado:", getPhaseId());
+                alert(`Debug: ID encontrado = ${getPhaseId()}\nCampos disponibles: ${Object.keys(phase).join(', ')}`);
+              }}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded text-xs transition-all duration-200"
+            >
+              🔍 Debug
+            </button>
+            
+            {!isEditing ? (
+              <>
+                <button
+                  onClick={() => {
+                    console.log("✏️ Botón Editar Fase clickeado");
+                    setIsEditing(true);
+                  }}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-1"
+                >
+                  ✏️ Editar Fase
+                </button>
+                <button
+                  onClick={() => {
+                    console.log("🗑️ Botón Eliminar Fase clickeado");
+                    handleDeletePhase();
+                  }}
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-1"
+                >
+                  🗑️ Eliminar Fase
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    console.log("💾 Botón Guardar clickeado");
+                    handleEditPhase();
+                  }}
+                  disabled={loading}
+                  className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-1"
+                >
+                  {loading ? "⏳" : "💾"} Guardar
+                </button>
+                <button
+                  onClick={() => {
+                    console.log("❌ Botón Cancelar clickeado");
+                    handleCancelEdit();
+                  }}
+                  disabled={loading}
+                  className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-1"
+                >
+                  ❌ Cancelar
+                </button>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Formulario de edición o información de la fase */}
+        {isEditing ? (
+          <div className="mb-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="text-lg font-semibold text-blue-900 mb-4">✏️ Editar Fase</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre de la Fase *
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nombre de la fase"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descripción
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={2}
+                  placeholder="Descripción de la fase"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha de Inicio
+                </label>
+                <input
+                  type="date"
+                  value={editForm.startDate}
+                  onChange={(e) => setEditForm({...editForm, startDate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha de Fin
+                </label>
+                <input
+                  type="date"
+                  value={editForm.endDate}
+                  onChange={(e) => setEditForm({...editForm, endDate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Presupuesto ($)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.budget}
+                  onChange={(e) => setEditForm({...editForm, budget: parseFloat(e.target.value) || 0})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Costo ($)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.cost}
+                  onChange={(e) => setEditForm({...editForm, cost: parseFloat(e.target.value) || 0})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-6 p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p className="text-gray-500 font-medium">📊 Progreso</p>
+              <p className="text-gray-800">{phase.percentageProgress || 0}%</p>
+            </div>
+            <div>
+              <p className="text-gray-500 font-medium">📅 Inicio</p>
+              <p className="text-gray-800">
+                {phase.startDate ? new Date(phase.startDate).toLocaleDateString("es-ES") : "N/A"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 font-medium">🏁 Fin</p>
+              <p className="text-gray-800">
+                {phase.endDate ? new Date(phase.endDate).toLocaleDateString("es-ES") : "N/A"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 font-medium">📈 Estado</p>
+              <span className={`px-2 py-1 rounded text-xs ${
+                phase.phaseStatus?.name === 'Activa' ? 'bg-green-100 text-green-800' :
+                phase.phaseStatus?.name === 'Completada' ? 'bg-blue-100 text-blue-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {phase.phaseStatus?.name || "Sin estado"}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Lista de tareas */}
         <div className="space-y-4">

@@ -64,6 +64,22 @@ export default function ProjectDetailsModal({ project, onClose, user }: any) {
     }
   };
 
+  // Handler para cuando se actualiza una fase desde el modal de tareas
+  const handlePhaseUpdated = (updatedPhase: Phase) => {
+    setPhases(prevPhases => 
+      prevPhases.map(phase => 
+        phase.idPhase === updatedPhase.idPhase ? updatedPhase : phase
+      )
+    );
+  };
+
+  // Handler para cuando se elimina una fase desde el modal de tareas
+  const handlePhaseDeleted = (phaseId: number) => {
+    setPhases(prevPhases => 
+      prevPhases.filter(phase => phase.idPhase !== phaseId)
+    );
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative">
@@ -227,6 +243,8 @@ export default function ProjectDetailsModal({ project, onClose, user }: any) {
             setShowTasksModal(false);
             setSelectedPhase(null);
           }}
+          onPhaseUpdated={handlePhaseUpdated}
+          onPhaseDeleted={handlePhaseDeleted}
         />
       )}
     </div>
