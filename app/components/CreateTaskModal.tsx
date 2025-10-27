@@ -16,9 +16,10 @@ interface CreateTaskModalProps {
   phaseName: string;
   onClose: () => void;
   onTaskCreated: (task: Task) => void;
+  existingTask?: Task; // Tarea existente para edición/visualización
 }
 
-export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCreated }: CreateTaskModalProps) {
+export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCreated, existingTask }: CreateTaskModalProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [taskStatuses, setTaskStatuses] = useState<TaskStatus[]>([]);
@@ -26,6 +27,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [downloadingFile, setDownloadingFile] = useState(false);
+  const [taskFileInfo, setTaskFileInfo] = useState<{name: string, size: number, url: string} | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -101,10 +104,10 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               name: user.name,
               email: user.email,
               photoUrl: user.photoUrl,
-              idUserStatus: user.status,
-              idUserType: user.role,
-              idOrganization: user.organizationId,
-              supabaseUserID: user.supabaseUserId
+              status: user.status as any, // Convertir enum a objeto
+              role: user.role as any, // Convertir enum a objeto
+              organizationId: user.organizationId,
+              supabaseUserId: user.supabaseUserId
             };
             setUsers([currentUser]);
             console.log("✅ Usando usuario actual como fallback:", currentUser);
@@ -166,10 +169,10 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               name: user.name,
               email: user.email,
               photoUrl: user.photoUrl,
-              idUserStatus: user.status,
-              idUserType: user.role,
-              idOrganization: user.organizationId,
-              supabaseUserID: user.supabaseUserId
+              status: user.status as any, // Convertir enum a objeto
+              role: user.role as any, // Convertir enum a objeto
+              organizationId: user.organizationId,
+              supabaseUserId: user.supabaseUserId
             };
             setUsers([currentUser]);
           }
@@ -205,7 +208,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   // Establecer usuario por defecto cuando se carguen los usuarios
   useEffect(() => {
     if (users.length > 0 && formData.IDUserRef === 0) {
-      setFormData(prev => ({ ...prev, IDUserRef: users[0].id }));
+      setFormData((prev: typeof formData) => ({ ...prev, IDUserRef: users[0].id }));
       console.log("🎯 Usuario por defecto establecido:", users[0]);
     }
   }, [users]);
@@ -220,15 +223,15 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       let needsUpdate = false;
       let updatedData = { ...formData };
       
-      if (formData.IDTaskStatusRef === 0 || !taskStatuses.find(s => s.idTaskStatus === formData.IDTaskStatusRef)) {
-        const pendingStatus = taskStatuses.find(s => s.name.toLowerCase().includes('pendiente')) || taskStatuses[0];
+      if (formData.IDTaskStatusRef === 0 || !taskStatuses.find((s: TaskStatus) => s.idTaskStatus === formData.IDTaskStatusRef)) {
+        const pendingStatus = taskStatuses.find((s: TaskStatus) => s.name.toLowerCase().includes('pendiente')) || taskStatuses[0];
         updatedData.IDTaskStatusRef = pendingStatus.idTaskStatus;
         needsUpdate = true;
         console.log("🎯 Estado por defecto establecido:", pendingStatus);
       }
       
-      if (formData.IDTaskPriorityRef === 0 || !taskPriorities.find(p => p.idTaskPriority === formData.IDTaskPriorityRef)) {
-        const mediumPriority = taskPriorities.find(p => p.name.toLowerCase().includes('media')) || taskPriorities[1] || taskPriorities[0];
+      if (formData.IDTaskPriorityRef === 0 || !taskPriorities.find((p: TaskPriority) => p.idTaskPriority === formData.IDTaskPriorityRef)) {
+        const mediumPriority = taskPriorities.find((p: TaskPriority) => p.name.toLowerCase().includes('media')) || taskPriorities[1] || taskPriorities[0];
         updatedData.IDTaskPriorityRef = mediumPriority.idTaskPriority;
         needsUpdate = true;
         console.log("🎯 Prioridad por defecto establecida:", mediumPriority);
@@ -242,6 +245,20 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       }
     }
   }, [dataLoaded, taskStatuses, taskPriorities]);
+
+  // Cargar información del archivo si existe una tarea
+  useEffect(() => {
+    if (existingTask && existingTask.fileURL) {
+      console.log("📎 Tarea existente con archivo:", existingTask.fileURL);
+      // Extraer nombre del archivo de la URL
+      const fileName = existingTask.fileURL.split('/').pop() || 'archivo_adjunto';
+      setTaskFileInfo({
+        name: fileName,
+        size: 0, // No tenemos información del tamaño desde el backend
+        url: existingTask.fileURL
+      });
+    }
+  }, [existingTask]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,12 +291,12 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       // Obtener nombres textuales de los IDs seleccionados
       console.log('🔍 Buscando estado con ID:', formData.IDTaskStatusRef);
       console.log('🔍 Estados disponibles:', taskStatuses);
-      const selectedStatus = taskStatuses.find(s => s.idTaskStatus === formData.IDTaskStatusRef);
+      const selectedStatus = taskStatuses.find((s: TaskStatus) => s.idTaskStatus === formData.IDTaskStatusRef);
       console.log('✅ Estado encontrado:', selectedStatus);
       
       console.log('🔍 Buscando prioridad con ID:', formData.IDTaskPriorityRef);
       console.log('🔍 Prioridades disponibles:', taskPriorities);
-      const selectedPriority = taskPriorities.find(p => p.idTaskPriority === formData.IDTaskPriorityRef);
+      const selectedPriority = taskPriorities.find((p: TaskPriority) => p.idTaskPriority === formData.IDTaskPriorityRef);
       console.log('✅ Prioridad encontrada:', selectedPriority);
       
       if (!selectedStatus) {
@@ -371,7 +388,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       return;
     }
     
-    setFormData(prev => {
+    setFormData((prev: typeof formData) => {
       const updated = { ...prev, [field]: value };
       console.log(`📋 FormData actualizado:`, updated);
       console.log(`✅ Nuevo valor de ${field}:`, updated[field as keyof typeof updated]);
@@ -382,6 +399,45 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setSelectedFile(file);
+  };
+
+  const handleDownloadFile = async () => {
+    if (!existingTask || !existingTask.idTask) {
+      alert("❌ No hay archivo para descargar");
+      return;
+    }
+
+    try {
+      setDownloadingFile(true);
+      console.log("📥 Descargando archivo de tarea:", existingTask.idTask);
+      
+      const blob = await taskService.downloadTaskFile(existingTask.idTask);
+      
+      // Crear URL del blob para descarga
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Usar el nombre del archivo si está disponible, sino un nombre genérico
+      const fileName = taskFileInfo?.name || `tarea_${existingTask.idTask}_archivo`;
+      link.download = fileName;
+      
+      // Simular click para iniciar descarga
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log("✅ Archivo descargado correctamente");
+      
+    } catch (error) {
+      console.error("❌ Error descargando archivo:", error);
+      alert(`❌ Error al descargar el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setDownloadingFile(false);
+    }
   };
 
   return (
@@ -396,10 +452,10 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
 
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            ➕ Nueva Tarea
+            {existingTask ? "📝 Editar Tarea" : "➕ Nueva Tarea"}
           </h2>
           <p className="text-gray-500 text-sm">
-            Crear nueva tarea para la fase: <strong>{phaseName}</strong>
+            {existingTask ? "Editar tarea existente" : "Crear nueva tarea"} para la fase: <strong>{phaseName}</strong>
           </p>
         </div>
 
@@ -434,8 +490,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
             <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
               <div>🔍 Debug - Estado actual: {formData.IDTaskStatusRef}</div>
               <div>🔍 Debug - Prioridad actual: {formData.IDTaskPriorityRef}</div>
-              <div>🔍 Debug - Estados disponibles: {taskStatuses.map(s => `${s.idTaskStatus}:${s.name}`).join(', ')}</div>
-              <div>🔍 Debug - Prioridades disponibles: {taskPriorities.map(p => `${p.idTaskPriority}:${p.name}`).join(', ')}</div>
+              <div>🔍 Debug - Estados disponibles: {taskStatuses.map((s: TaskStatus) => `${s.idTaskStatus}:${s.name}`).join(', ')}</div>
+              <div>🔍 Debug - Prioridades disponibles: {taskPriorities.map((p: TaskPriority) => `${p.idTaskPriority}:${p.name}`).join(', ')}</div>
             </div>
           {/* Información básica */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -510,11 +566,11 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
                   // Buscar el estado por ID o por nombre si el ID no es válido
                   let selectedStatus;
                   if (value && !isNaN(parseInt(value))) {
-                    selectedStatus = taskStatuses.find(s => s.idTaskStatus === parseInt(value));
+                    selectedStatus = taskStatuses.find((s: TaskStatus) => s.idTaskStatus === parseInt(value));
                     console.log('✅ Estado encontrado por ID:', selectedStatus);
                   } else {
                     // Si el valor es un nombre, buscar por nombre
-                    selectedStatus = taskStatuses.find(s => s.name === value);
+                    selectedStatus = taskStatuses.find((s: TaskStatus) => s.name === value);
                     console.log('✅ Estado encontrado por nombre:', selectedStatus);
                   }
                   
@@ -533,7 +589,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
                 <option value="" disabled>
                   Seleccione un estado
                 </option>
-                {taskStatuses.map((status) => (
+                {taskStatuses.map((status: TaskStatus) => (
                   <option key={status.idTaskStatus} value={status.idTaskStatus}>
                     {status.name}
                   </option>
@@ -558,11 +614,11 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
                   // Buscar la prioridad por ID o por nombre si el ID no es válido
                   let selectedPriority;
                   if (value && !isNaN(parseInt(value))) {
-                    selectedPriority = taskPriorities.find(p => p.idTaskPriority === parseInt(value));
+                    selectedPriority = taskPriorities.find((p: TaskPriority) => p.idTaskPriority === parseInt(value));
                     console.log('✅ Prioridad encontrada por ID:', selectedPriority);
                   } else {
                     // Si el valor es un nombre, buscar por nombre
-                    selectedPriority = taskPriorities.find(p => p.name === value);
+                    selectedPriority = taskPriorities.find((p: TaskPriority) => p.name === value);
                     console.log('✅ Prioridad encontrada por nombre:', selectedPriority);
                   }
                   
@@ -581,7 +637,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
                 <option value="" disabled>
                   Seleccione una prioridad
                 </option>
-                {taskPriorities.map((priority) => (
+                {taskPriorities.map((priority: TaskPriority) => (
                   <option key={priority.idTaskPriority} value={priority.idTaskPriority}>
                     {priority.name}
                   </option>
@@ -609,7 +665,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-black"
             >
-              {users.map((user) => (
+              {users.map((user: UserProfile) => (
                 <option key={user.id} value={user.id}>
                   {user.name}
                 </option>
@@ -706,6 +762,47 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
             </div>
           </div>
 
+          {/* Archivo existente de la tarea */}
+          {existingTask && taskFileInfo && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Archivo Actual de la Tarea
+              </label>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-600">📎</span>
+                    <div>
+                      <div className="text-sm font-medium text-blue-900">
+                        {taskFileInfo.name}
+                      </div>
+                      <div className="text-xs text-blue-600">
+                        Archivo adjunto existente
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDownloadFile}
+                    disabled={downloadingFile}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 flex items-center gap-1"
+                  >
+                    {downloadingFile ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                        Descargando...
+                      </>
+                    ) : (
+                      <>
+                        ⬇️ Descargar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Botones */}
           <div className="flex justify-end gap-3 pt-6 border-t">
             <button
@@ -724,11 +821,11 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Creando...
+                  {existingTask ? "Actualizando..." : "Creando..."}
                 </>
               ) : (
                 <>
-                  ➕ Crear Tarea
+                  {existingTask ? "💾 Actualizar Tarea" : "➕ Crear Tarea"}
                 </>
               )}
             </button>

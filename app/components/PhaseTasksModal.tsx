@@ -19,6 +19,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [downloadingFiles, setDownloadingFiles] = useState<Set<number>>(new Set());
   const [editForm, setEditForm] = useState({
     name: phase.name,
     description: phase.description || '',
@@ -68,7 +69,8 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
             percentageProgress: 75,
             taskStatus: { idTaskStatus: 1, name: "En Progreso" },
             taskPriority: { idTaskPriority: 2, name: "Media" },
-            user: { idUser: 1, name: "Juan Pérez" }
+            user: { idUser: 1, name: "Juan Pérez" },
+            fileURL: "https://ejemplo.com/archivos/mockup_interfaz.pdf"
           },
           {
             idTask: 2,
@@ -77,7 +79,8 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
             percentageProgress: 45,
             taskStatus: { idTaskStatus: 1, name: "En Progreso" },
             taskPriority: { idTaskPriority: 1, name: "Alta" },
-            user: { idUser: 2, name: "María García" }
+            user: { idUser: 2, name: "María García" },
+            fileURL: "https://ejemplo.com/archivos/api_documentation.docx"
           },
           {
             idTask: 3,
@@ -87,6 +90,16 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
             taskStatus: { idTaskStatus: 3, name: "Pendiente" },
             taskPriority: { idTaskPriority: 3, name: "Baja" },
             user: { idUser: 1, name: "Juan Pérez" }
+          },
+          {
+            idTask: 4,
+            name: "Documentación técnica",
+            description: "Crear documentación completa del proyecto",
+            percentageProgress: 90,
+            taskStatus: { idTaskStatus: 2, name: "Completada" },
+            taskPriority: { idTaskPriority: 2, name: "Media" },
+            user: { idUser: 3, name: "Carlos López" },
+            fileURL: "https://ejemplo.com/archivos/documentacion_tecnica.pdf"
           }
         ]);
       } finally {
@@ -199,7 +212,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
 
   // Función para manejar la creación de una nueva tarea
   const handleTaskCreated = (newTask: Task) => {
-    setTasks(prev => [...prev, newTask]);
+    setTasks((prev: Task[]) => [...prev, newTask]);
     setShowCreateTaskModal(false);
   };
 
@@ -216,6 +229,53 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
       console.error("Error recargando tareas:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Función para descargar archivo de una tarea
+  const handleDownloadFile = async (taskId: number, fileName?: string) => {
+    if (!taskId) {
+      alert("❌ No hay archivo para descargar");
+      return;
+    }
+
+    try {
+      // Agregar tarea a la lista de descargas en progreso
+      setDownloadingFiles((prev: Set<number>) => new Set(prev).add(taskId));
+      
+      console.log("📥 Descargando archivo de tarea:", taskId);
+      
+      const blob = await taskService.downloadTaskFile(taskId);
+      
+      // Crear URL del blob para descarga
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Usar el nombre del archivo si está disponible, sino un nombre genérico
+      const downloadFileName = fileName || `tarea_${taskId}_archivo`;
+      link.download = downloadFileName;
+      
+      // Simular click para iniciar descarga
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log("✅ Archivo descargado correctamente");
+      
+    } catch (error) {
+      console.error("❌ Error descargando archivo:", error);
+      alert(`❌ Error al descargar el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      // Remover tarea de la lista de descargas en progreso
+      setDownloadingFiles((prev: Set<number>) => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
     }
   };
 
@@ -421,7 +481,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
             </div>
           ) : (
             <div className="space-y-3">
-              {tasks.map((task) => (
+              {tasks.map((task: Task) => (
                 <div key={task.idTask} className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors duration-200">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
@@ -477,6 +537,44 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
                           {task.cost && (
                             <span>💸 Costo: ${task.cost.toLocaleString()}</span>
                           )}
+                        </div>
+                      )}
+
+                      {/* Archivo adjunto */}
+                      {task.fileURL && (
+                        <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-blue-600">📎</span>
+                              <div>
+                                <div className="text-sm font-medium text-blue-900">
+                                  {task.fileURL.split('/').pop() || 'archivo_adjunto'}
+                                </div>
+                                <div className="text-xs text-blue-600">
+                                  Archivo adjunto disponible
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const fileName = task.fileURL?.split('/').pop() || `tarea_${task.idTask}_archivo`;
+                                handleDownloadFile(task.idTask!, fileName);
+                              }}
+                              disabled={downloadingFiles.has(task.idTask!)}
+                              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-2 py-1 rounded text-xs transition-colors duration-200 flex items-center gap-1"
+                            >
+                              {downloadingFiles.has(task.idTask!) ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                  Descargando...
+                                </>
+                              ) : (
+                                <>
+                                  ⬇️ Descargar
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

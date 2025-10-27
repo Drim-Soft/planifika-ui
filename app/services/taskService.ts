@@ -136,6 +136,48 @@ class TaskService {
   async deleteTask(id: number): Promise<string> {
     return this.request<string>(`/tasks/${id}`, { method: 'DELETE' });
   }
+
+  // Descargar archivo de una tarea
+  async downloadTaskFile(taskId: number): Promise<Blob> {
+    const url = `${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}/tasks/${taskId}/download-file`;
+    
+    const config: RequestInit = {
+      method: 'GET',
+      signal: AbortSignal.timeout(API_CONFIG_PROJECTS_PLANIFIKA.TIMEOUT),
+    };
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Error del servidor: ${response.status}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      return await response.blob();
+    } catch (error) {
+      console.error('Error al descargar archivo de tarea:', error);
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté en ${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}`);
+      }
+      
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        throw new Error('La solicitud tardó demasiado tiempo. El servidor puede estar sobrecargado o no disponible.');
+      }
+      
+      throw error;
+    }
+  }
 }
 
 export const taskService = new TaskService();
