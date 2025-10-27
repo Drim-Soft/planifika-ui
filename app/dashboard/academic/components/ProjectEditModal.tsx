@@ -3,9 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { projectService } from "../../../services/projectService";
-import { phaseService } from "../../../services/phaseService";
-import { Phase } from "@/app/types/phase";
-import PhaseEditModal from "./PhaseEditModal";
 
 export default function ProjectEditModal({ project, onClose }: any) {
   const router = useRouter();
@@ -26,11 +23,6 @@ export default function ProjectEditModal({ project, onClose }: any) {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  // Estados para fases
-  const [phases, setPhases] = useState<Phase[]>([]);
-  const [showPhaseModal, setShowPhaseModal] = useState(false);
-  const [editingPhase, setEditingPhase] = useState<Phase | null>(null);
 
   const projectId = project.IDProject ?? project.idproject;
   const methodologyId =
@@ -82,15 +74,6 @@ export default function ProjectEditModal({ project, onClose }: any) {
       .getUsersInProject(projectId)
       .then((data) => setUsers(data))
       .catch((err) => console.error("Error cargando usuarios:", err));
-  }, [projectId]);
-
-  // 🔹 Cargar fases del proyecto
-  useEffect(() => {
-    if (!projectId) return;
-    phaseService
-      .getPhasesByProject(projectId)
-      .then((data: Phase[]) => setPhases(data))
-      .catch((err: any) => console.error("Error cargando fases:", err));
   }, [projectId]);
 
   const handleChange = (name: string, value: any) => {
@@ -153,39 +136,6 @@ export default function ProjectEditModal({ project, onClose }: any) {
       console.error(err);
       alert("❌ No se pudo asignar el usuario.");
     }
-  };
-
-  // 🔹 Funciones para manejar fases
-  const handleCreatePhase = () => {
-    setEditingPhase(null);
-    setShowPhaseModal(true);
-  };
-
-  const handleEditPhase = (phase: Phase) => {
-    setEditingPhase(phase);
-    setShowPhaseModal(true);
-  };
-
-  const handleDeletePhase = async (phaseId: number) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta fase?")) return;
-
-    try {
-      await phaseService.deletePhase(phaseId);
-      alert("✅ Fase eliminada correctamente");
-      
-      // Recargar fases
-      const updatedPhases = await phaseService.getPhasesByProject(projectId);
-      setPhases(updatedPhases);
-    } catch (err) {
-      console.error(err);
-      alert("❌ Error al eliminar la fase");
-    }
-  };
-
-  const handlePhaseSave = async () => {
-    // Recargar fases después de guardar
-    const updatedPhases = await phaseService.getPhasesByProject(projectId);
-    setPhases(updatedPhases);
   };
 
   return (
@@ -334,74 +284,6 @@ export default function ProjectEditModal({ project, onClose }: any) {
           </button>
         </div>
 
-        {/* Gestión de Fases */}
-        <div className="mt-8 border-t pt-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-gray-800">Fases del Proyecto</h3>
-            <button
-              onClick={handleCreatePhase}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm"
-            >
-              ➕ Nueva Fase
-            </button>
-          </div>
-
-          {phases.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No hay fases creadas para este proyecto</p>
-              <p className="text-sm">Haz clic en "Nueva Fase" para comenzar</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {phases.map((phase) => (
-                <div key={phase.idPhase} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{phase.name}</h4>
-                      {phase.description && (
-                        <p className="text-sm text-gray-600 mt-1">{phase.description}</p>
-                      )}
-                      <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                        {phase.startDate && (
-                          <span>📅 Inicio: {phase.startDate.slice(0, 10)}</span>
-                        )}
-                        {phase.endDate && (
-                          <span>📅 Fin: {phase.endDate.slice(0, 10)}</span>
-                        )}
-                        {phase.percentageProgress !== undefined && (
-                          <span>📊 Progreso: {phase.percentageProgress}%</span>
-                        )}
-                        {phase.phaseStatus?.name && (
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            phase.phaseStatus.name === 'Activa' ? 'bg-green-100 text-green-800' :
-                            phase.phaseStatus.name === 'Completada' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {phase.phaseStatus.name}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <button
-                        onClick={() => handleEditPhase(phase)}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs transition-all duration-200"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        onClick={() => handleDeletePhase(phase.idPhase!)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs transition-all duration-200"
-                      >
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* Botones finales */}
         <div className="flex justify-end gap-3 mt-8">
@@ -421,15 +303,6 @@ export default function ProjectEditModal({ project, onClose }: any) {
         </div>
       </div>
 
-      {/* Modal de Fases */}
-      {showPhaseModal && (
-        <PhaseEditModal
-          projectId={projectId}
-          phase={editingPhase}
-          onClose={() => setShowPhaseModal(false)}
-          onSave={handlePhaseSave}
-        />
-      )}
     </div>
   );
 }

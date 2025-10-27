@@ -1,6 +1,11 @@
 "use client";
 
-import { hasAdminProjectRole } from "@/app/utils/roleUtils"; // usa tu helper global si lo tienes
+import { useEffect, useState } from "react";
+import { hasAdminProjectRole } from "@/app/utils/roleUtils";
+import { phaseService } from "../services/phaseService";
+import { Phase } from "@/app/types/phase";
+import PhaseEditModal from "../dashboard/academic/components/PhaseEditModal";
+import PhaseTasksModal from "./PhaseTasksModal";
 
 export default function ProjectDetailsModal({ project, onClose, user }: any) {
   if (!project) return null;
@@ -8,17 +13,55 @@ export default function ProjectDetailsModal({ project, onClose, user }: any) {
   // ✅ Verificar permisos reales de admin basados en el rol del usuario en ese proyecto
   const isAdmin = hasAdminProjectRole(user?.role, project?.userRoleId);
 
-  // Ejemplo de sprints temporales
-  const phases = [
-    { id: 1, name: "Sprint 1", progress: 60 },
-    { id: 2, name: "Sprint 2", progress: 30 },
-    { id: 3, name: "Sprint 3", progress: 0 },
-  ];
+  // Estados para fases
+  const [phases, setPhases] = useState<Phase[]>([]);
+  const [showPhaseModal, setShowPhaseModal] = useState(false);
+  const [editingPhase, setEditingPhase] = useState<Phase | null>(null);
+  const [loadingPhases, setLoadingPhases] = useState(false);
+  
+  // Estados para tareas
+  const [showTasksModal, setShowTasksModal] = useState(false);
+  const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
 
-  // Handler para crear sprint
-  const handleCreateSprint = () => {
-    console.log("🚀 Crear nuevo sprint para el proyecto:", project.IDProject);
-    alert("Funcionalidad de creación de Sprint próximamente.");
+  // Cargar fases del proyecto
+  useEffect(() => {
+    const loadPhases = async () => {
+      if (!project.IDProject) return;
+      
+      try {
+        setLoadingPhases(true);
+        const projectPhases = await phaseService.getPhasesByProject(project.IDProject);
+        setPhases(projectPhases);
+      } catch (err) {
+        console.error("Error cargando fases:", err);
+      } finally {
+        setLoadingPhases(false);
+      }
+    };
+
+    loadPhases();
+  }, [project.IDProject]);
+
+  // Handler para crear fase
+  const handleCreatePhase = () => {
+    setEditingPhase(null);
+    setShowPhaseModal(true);
+  };
+
+  // Handler para hacer click en una fase (ver tareas)
+  const handlePhaseClick = (phase: Phase) => {
+    setSelectedPhase(phase);
+    setShowTasksModal(true);
+  };
+
+  // Handler para recargar fases después de guardar
+  const handlePhaseSave = async () => {
+    try {
+      const updatedPhases = await phaseService.getPhasesByProject(project.IDProject);
+      setPhases(updatedPhases);
+    } catch (err) {
+      console.error("Error recargando fases:", err);
+    }
   };
 
   return (
@@ -98,44 +141,94 @@ export default function ProjectDetailsModal({ project, onClose, user }: any) {
           </p>
         </div>
 
-        {/* Sprints */}
+        {/* Fases */}
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">
-            🧱 Sprints del Proyecto
+            📋 Fases del Proyecto
           </h3>
 
           {/* ✅ Solo admins pueden ver este botón */}
           {isAdmin && (
             <button
-              onClick={handleCreateSprint}
+              onClick={handleCreatePhase}
               className="bg-yellow-600 hover:bg-yellow-700 text-white text-sm px-3 py-1 rounded-lg transition-colors duration-200"
             >
-              ➕ Crear Sprint
+              ➕ Crear Fase
             </button>
           )}
         </div>
 
-        {/* Lista de sprints */}
+        {/* Lista de fases */}
         <div className="flex flex-wrap gap-3">
-          {phases.map((phase) => (
-            <div
-              key={phase.id}
-              className="cursor-pointer p-4 bg-gray-50 hover:bg-gray-100 transition-all duration-300 rounded-xl border border-gray-200 shadow-sm flex-1 min-w-[100px] text-center"
-            >
-              <p className="font-medium text-gray-800">{phase.name}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {phase.progress}% completado
-              </p>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{ width: `${phase.progress}%` }}
-                ></div>
-              </div>
+          {loadingPhases ? (
+            <div className="w-full text-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600 mx-auto mb-2"></div>
+              <p className="text-sm text-gray-500">Cargando fases...</p>
             </div>
-          ))}
+          ) : phases.length === 0 ? (
+            <div className="w-full text-center py-8 text-gray-500">
+              <p>No hay fases creadas para este proyecto</p>
+              {isAdmin && (
+                <p className="text-sm">Haz clic en "Crear Fase" para comenzar</p>
+              )}
+            </div>
+          ) : (
+            phases.map((phase) => (
+              <div
+                key={phase.idPhase}
+                onClick={() => handlePhaseClick(phase)}
+                className="cursor-pointer p-4 bg-gray-50 hover:bg-gray-100 transition-all duration-300 rounded-xl border border-gray-200 shadow-sm flex-1 min-w-[120px] text-center"
+              >
+                <p className="font-medium text-gray-800">{phase.name}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {phase.percentageProgress || 0}% completado
+                </p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div
+                    className={`h-2 rounded-full ${
+                      (phase.percentageProgress || 0) >= 80 ? "bg-green-500" :
+                      (phase.percentageProgress || 0) >= 50 ? "bg-blue-500" :
+                      (phase.percentageProgress || 0) >= 25 ? "bg-yellow-500" :
+                      "bg-red-500"
+                    }`}
+                    style={{ width: `${phase.percentageProgress || 0}%` }}
+                  ></div>
+                </div>
+                {phase.phaseStatus?.name && (
+                  <span className={`inline-block px-2 py-1 rounded text-xs mt-2 ${
+                    phase.phaseStatus.name === 'Activa' ? 'bg-green-100 text-green-800' :
+                    phase.phaseStatus.name === 'Completada' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {phase.phaseStatus.name}
+                  </span>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      {/* Modal de Fases */}
+      {showPhaseModal && (
+        <PhaseEditModal
+          projectId={project.IDProject}
+          phase={editingPhase}
+          onClose={() => setShowPhaseModal(false)}
+          onSave={handlePhaseSave}
+        />
+      )}
+
+      {/* Modal de Tareas */}
+      {showTasksModal && selectedPhase && (
+        <PhaseTasksModal
+          phase={selectedPhase}
+          onClose={() => {
+            setShowTasksModal(false);
+            setSelectedPhase(null);
+          }}
+        />
+      )}
     </div>
   );
 }
