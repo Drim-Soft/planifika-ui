@@ -61,17 +61,27 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         // Cargar estados de tarea desde el backend de proyectos
         console.log("📊 Cargando estados de tarea...");
         const statuses = await taskStatusService.getAllTaskStatuses();
+        console.log("✅ Estados cargados:", statuses);
+        // Asegurar que los IDs sean números - usar las propiedades correctas del backend
+        const validatedStatuses = statuses.map(status => ({
+          ...status,
+          idTaskStatus: typeof (status as any).idtaskStatus === 'string' ? parseInt((status as any).idtaskStatus) : (status as any).idtaskStatus
+        }));
         if (isMounted) {
-          console.log("✅ Estados cargados:", statuses);
-          setTaskStatuses(statuses);
+          setTaskStatuses(validatedStatuses);
         }
         
         // Cargar prioridades de tarea desde el backend de proyectos
         console.log("⚡ Cargando prioridades de tarea...");
         const priorities = await taskPriorityService.getAllTaskPriorities();
+        console.log("✅ Prioridades cargadas:", priorities);
+        // Asegurar que los IDs sean números - usar las propiedades correctas del backend
+        const validatedPriorities = priorities.map(priority => ({
+          ...priority,
+          idTaskPriority: typeof (priority as any).idtaskPriority === 'string' ? parseInt((priority as any).idtaskPriority) : (priority as any).idtaskPriority
+        }));
         if (isMounted) {
-          console.log("✅ Prioridades cargadas:", priorities);
-          setTaskPriorities(priorities);
+          setTaskPriorities(validatedPriorities);
         }
         
         // Intentar cargar usuarios, pero manejar error 401
@@ -90,7 +100,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               id: user.id,
               name: user.name,
               email: user.email,
-              photoURL: user.photoUrl,
+              photoUrl: user.photoUrl,
               idUserStatus: user.status,
               idUserType: user.role,
               idOrganization: user.organizationId,
@@ -107,16 +117,16 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
           // Establecer valores por defecto dinámicamente
           let updatedFormData = { ...formData };
           
-          if (statuses.length > 0) {
+          if (validatedStatuses.length > 0) {
             // Buscar estado "Pendiente" o usar el primero
-            const pendingStatus = statuses.find(s => s.name.toLowerCase().includes('pendiente')) || statuses[0];
+            const pendingStatus = validatedStatuses.find(s => s.name.toLowerCase().includes('pendiente')) || validatedStatuses[0];
             updatedFormData.IDTaskStatusRef = pendingStatus.idTaskStatus;
             console.log("🎯 Estado por defecto:", pendingStatus, "ID:", pendingStatus.idTaskStatus);
           }
           
-          if (priorities.length > 0) {
+          if (validatedPriorities.length > 0) {
             // Buscar prioridad "Media" o usar la segunda opción
-            const mediumPriority = priorities.find(p => p.name.toLowerCase().includes('media')) || priorities[1] || priorities[0];
+            const mediumPriority = validatedPriorities.find(p => p.name.toLowerCase().includes('media')) || validatedPriorities[1] || validatedPriorities[0];
             updatedFormData.IDTaskPriorityRef = mediumPriority.idTaskPriority;
             console.log("🎯 Prioridad por defecto:", mediumPriority, "ID:", mediumPriority.idTaskPriority);
           }
@@ -126,6 +136,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
           setDataLoaded(true);
           console.log("✅ Todos los datos cargados correctamente");
           console.log("📋 FormData actualizado:", updatedFormData);
+          console.log("🔍 Estado seleccionado:", updatedFormData.IDTaskStatusRef);
+          console.log("🔍 Prioridad seleccionada:", updatedFormData.IDTaskPriorityRef);
         }
         
       } catch (error) {
@@ -153,7 +165,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               id: user.id,
               name: user.name,
               email: user.email,
-              photoURL: user.photoUrl,
+              photoUrl: user.photoUrl,
               idUserStatus: user.status,
               idUserType: user.role,
               idOrganization: user.organizationId,
@@ -163,14 +175,17 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
           }
           
           // Establecer valores por defecto con datos mock
-          setFormData(prev => ({
-            ...prev,
+          const mockFormData = {
+            ...formData,
             IDTaskStatusRef: mockStatuses[0].idTaskStatus, // Pendiente
-            IDTaskPriorityRef: mockPriorities[1].idTaskPriority // Media
-          }));
+            IDTaskPriorityRef: mockPriorities[1] ? mockPriorities[1].idTaskPriority : mockPriorities[0].idTaskPriority // Media o primera disponible
+          };
           
+          setFormData(mockFormData);
           setDataLoaded(true);
           console.log("✅ Datos mock cargados con valores por defecto");
+          console.log("🔍 Estado mock seleccionado:", mockFormData.IDTaskStatusRef);
+          console.log("🔍 Prioridad mock seleccionada:", mockFormData.IDTaskPriorityRef);
         }
       } finally {
         if (isMounted) {
@@ -199,18 +214,20 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   useEffect(() => {
     if (dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0) {
       console.log("🔄 Estableciendo valores por defecto después de cargar datos");
+      console.log("🔍 Estado actual:", formData.IDTaskStatusRef);
+      console.log("🔍 Prioridad actual:", formData.IDTaskPriorityRef);
       
       let needsUpdate = false;
       let updatedData = { ...formData };
       
-      if (formData.IDTaskStatusRef === 0) {
+      if (formData.IDTaskStatusRef === 0 || !taskStatuses.find(s => s.idTaskStatus === formData.IDTaskStatusRef)) {
         const pendingStatus = taskStatuses.find(s => s.name.toLowerCase().includes('pendiente')) || taskStatuses[0];
         updatedData.IDTaskStatusRef = pendingStatus.idTaskStatus;
         needsUpdate = true;
         console.log("🎯 Estado por defecto establecido:", pendingStatus);
       }
       
-      if (formData.IDTaskPriorityRef === 0) {
+      if (formData.IDTaskPriorityRef === 0 || !taskPriorities.find(p => p.idTaskPriority === formData.IDTaskPriorityRef)) {
         const mediumPriority = taskPriorities.find(p => p.name.toLowerCase().includes('media')) || taskPriorities[1] || taskPriorities[0];
         updatedData.IDTaskPriorityRef = mediumPriority.idTaskPriority;
         needsUpdate = true;
@@ -220,6 +237,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       if (needsUpdate) {
         setFormData(updatedData);
         console.log("✅ Valores por defecto actualizados:", updatedData);
+        console.log("🔍 Nuevo estado:", updatedData.IDTaskStatusRef);
+        console.log("🔍 Nueva prioridad:", updatedData.IDTaskPriorityRef);
       }
     }
   }, [dataLoaded, taskStatuses, taskPriorities]);
@@ -253,8 +272,15 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       setLoading(true);
       
       // Obtener nombres textuales de los IDs seleccionados
+      console.log('🔍 Buscando estado con ID:', formData.IDTaskStatusRef);
+      console.log('🔍 Estados disponibles:', taskStatuses);
       const selectedStatus = taskStatuses.find(s => s.idTaskStatus === formData.IDTaskStatusRef);
+      console.log('✅ Estado encontrado:', selectedStatus);
+      
+      console.log('🔍 Buscando prioridad con ID:', formData.IDTaskPriorityRef);
+      console.log('🔍 Prioridades disponibles:', taskPriorities);
       const selectedPriority = taskPriorities.find(p => p.idTaskPriority === formData.IDTaskPriorityRef);
+      console.log('✅ Prioridad encontrada:', selectedPriority);
       
       if (!selectedStatus) {
         alert("Debe seleccionar un estado válido para la tarea");
@@ -279,8 +305,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         score: formData.score || 0,
         feedback: formData.feedback || null,
         phaseId: formData.IDPhaseRef, // ✅ Parámetro correcto según error del backend
-        statusName: selectedStatus.name, // ✅ Nombre textual en lugar de ID
-        priorityName: selectedPriority.name, // ✅ Nombre textual en lugar de ID
+        statusName: selectedStatus.name, // ✅ Nombre textual como requiere el backend
+        priorityName: selectedPriority.name, // ✅ Nombre textual como requiere el backend
         userId: formData.IDUserRef // ✅ Parámetro correcto
       };
       
@@ -337,6 +363,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
 
   const handleInputChange = (field: string, value: string | number) => {
     console.log(`🔄 Actualizando campo ${field}:`, value, typeof value);
+    console.log(`🔍 Valor anterior de ${field}:`, formData[field as keyof typeof formData]);
     
     // Validar que el valor no sea NaN para campos numéricos
     if (typeof value === 'number' && isNaN(value)) {
@@ -347,6 +374,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       console.log(`📋 FormData actualizado:`, updated);
+      console.log(`✅ Nuevo valor de ${field}:`, updated[field as keyof typeof updated]);
       return updated;
     });
   };
@@ -402,6 +430,13 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         
         {dataLoaded && (
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Debug info */}
+            <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+              <div>🔍 Debug - Estado actual: {formData.IDTaskStatusRef}</div>
+              <div>🔍 Debug - Prioridad actual: {formData.IDTaskPriorityRef}</div>
+              <div>🔍 Debug - Estados disponibles: {taskStatuses.map(s => `${s.idTaskStatus}:${s.name}`).join(', ')}</div>
+              <div>🔍 Debug - Prioridades disponibles: {taskPriorities.map(p => `${p.idTaskPriority}:${p.name}`).join(', ')}</div>
+            </div>
           {/* Información básica */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
@@ -469,9 +504,27 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
                 value={formData.IDTaskStatusRef || ''}
                 onChange={(e) => {
                   const value = e.target.value;
-                  console.log('🔄 Estado seleccionado:', value);
+                  console.log('🔄 Estado seleccionado - ID:', value);
+                  console.log('🔄 Estado seleccionado - Nombre:', e.target.selectedOptions[0]?.text);
+                  
+                  // Buscar el estado por ID o por nombre si el ID no es válido
+                  let selectedStatus;
                   if (value && !isNaN(parseInt(value))) {
-                    handleInputChange('IDTaskStatusRef', parseInt(value));
+                    selectedStatus = taskStatuses.find(s => s.idTaskStatus === parseInt(value));
+                    console.log('✅ Estado encontrado por ID:', selectedStatus);
+                  } else {
+                    // Si el valor es un nombre, buscar por nombre
+                    selectedStatus = taskStatuses.find(s => s.name === value);
+                    console.log('✅ Estado encontrado por nombre:', selectedStatus);
+                  }
+                  
+                  if (selectedStatus) {
+                    // Usar la propiedad correcta según el objeto encontrado
+                    const statusId = selectedStatus.idTaskStatus || (selectedStatus as any).idtaskStatus;
+                    console.log('✅ Actualizando IDTaskStatusRef a:', statusId);
+                    handleInputChange('IDTaskStatusRef', statusId);
+                  } else {
+                    console.log('❌ Estado no encontrado para valor:', value);
                   }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-black"
@@ -499,9 +552,27 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
                 value={formData.IDTaskPriorityRef || ''}
                 onChange={(e) => {
                   const value = e.target.value;
-                  console.log('🔄 Prioridad seleccionada:', value);
+                  console.log('🔄 Prioridad seleccionada - ID:', value);
+                  console.log('🔄 Prioridad seleccionada - Nombre:', e.target.selectedOptions[0]?.text);
+                  
+                  // Buscar la prioridad por ID o por nombre si el ID no es válido
+                  let selectedPriority;
                   if (value && !isNaN(parseInt(value))) {
-                    handleInputChange('IDTaskPriorityRef', parseInt(value));
+                    selectedPriority = taskPriorities.find(p => p.idTaskPriority === parseInt(value));
+                    console.log('✅ Prioridad encontrada por ID:', selectedPriority);
+                  } else {
+                    // Si el valor es un nombre, buscar por nombre
+                    selectedPriority = taskPriorities.find(p => p.name === value);
+                    console.log('✅ Prioridad encontrada por nombre:', selectedPriority);
+                  }
+                  
+                  if (selectedPriority) {
+                    // Usar la propiedad correcta según el objeto encontrado
+                    const priorityId = selectedPriority.idTaskPriority || (selectedPriority as any).idtaskPriority;
+                    console.log('✅ Actualizando IDTaskPriorityRef a:', priorityId);
+                    handleInputChange('IDTaskPriorityRef', priorityId);
+                  } else {
+                    console.log('❌ Prioridad no encontrada para valor:', value);
                   }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-black"
