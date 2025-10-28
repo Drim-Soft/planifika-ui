@@ -8,6 +8,10 @@ import OrganizationModal from "../components/OrganizationModal";
 import { organizationService, Organization } from "../services/organizationService";
 import { useAuth } from "../contexts/AuthContext";
 import { UserRole } from "../types/auth";
+import { userService } from "../services/userService";
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 
 export default function CreateOrganization() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -31,6 +35,7 @@ export default function CreateOrganization() {
     try {
       const newOrganization = await organizationService.createOrganization(organizationData);
       console.log("Organización creada:", newOrganization);
+      await userService.updateUserOrganization(user!.id, newOrganization?.id!);
       // Redirigir al dashboard del administrador tras crear y asociar
       router.push('/dashboard');
     } catch (error) {
