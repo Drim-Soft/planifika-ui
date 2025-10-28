@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { taskService } from "../services/taskService";
 import { taskStatusService } from "../services/taskStatusService";
 import { taskPriorityService } from "../services/taskPriorityService";
@@ -16,11 +16,21 @@ interface CreateTaskModalProps {
   phaseName: string;
   onClose: () => void;
   onTaskCreated: (task: Task) => void;
+  onTaskUpdated?: (task: Task) => void;
+  onTaskDeleted?: (taskId: number) => void;
+  onRefreshTasks?: () => void; // Función para recargar la lista de tareas
   existingTask?: Task; // Tarea existente para edición/visualización
 }
 
-export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCreated, existingTask }: CreateTaskModalProps) {
+export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCreated, onTaskUpdated, onTaskDeleted, onRefreshTasks, existingTask }: CreateTaskModalProps) {
   const { user } = useAuth();
+  
+  console.log("🚀 CreateTaskModal renderizado con:", {
+    existingTask: existingTask ? existingTask.name : "null",
+    isEditMode: !!existingTask,
+    phaseId,
+    phaseName
+  });
   const [loading, setLoading] = useState(false);
   const [taskStatuses, setTaskStatuses] = useState<TaskStatus[]>([]);
   const [taskPriorities, setTaskPriorities] = useState<TaskPriority[]>([]);
@@ -29,6 +39,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   const [dataLoaded, setDataLoaded] = useState(false);
   const [downloadingFile, setDownloadingFile] = useState(false);
   const [taskFileInfo, setTaskFileInfo] = useState<{name: string, size: number, url: string} | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -112,7 +123,19 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
             setUsers([currentUser]);
             console.log("✅ Usando usuario actual como fallback:", currentUser);
           } else if (isMounted) {
-            setUsers([]);
+            // Crear usuario mock si no hay usuario autenticado
+            const mockUser: UserProfile = {
+              id: 1,
+              name: "Usuario Demo",
+              email: "demo@example.com",
+              photoUrl: undefined,
+              status: { name: "Activo" } as any,
+              role: { name: "Usuario" } as any,
+              organizationId: 1,
+              supabaseUserId: "demo-user"
+            };
+            setUsers([mockUser]);
+            console.log("✅ Usando usuario mock:", mockUser);
           }
         }
         
@@ -213,10 +236,10 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
     }
   }, [users]);
 
-  // Establecer valores por defecto cuando se carguen los datos
+  // Establecer valores por defecto cuando se carguen los datos (solo en modo creación)
   useEffect(() => {
-    if (dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0) {
-      console.log("🔄 Estableciendo valores por defecto después de cargar datos");
+    if (dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0 && !isEditMode) {
+      console.log("🔄 Estableciendo valores por defecto después de cargar datos (modo creación)");
       console.log("🔍 Estado actual:", formData.IDTaskStatusRef);
       console.log("🔍 Prioridad actual:", formData.IDTaskPriorityRef);
       
@@ -244,7 +267,59 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         console.log("🔍 Nueva prioridad:", updatedData.IDTaskPriorityRef);
       }
     }
-  }, [dataLoaded, taskStatuses, taskPriorities]);
+  }, [dataLoaded, taskStatuses, taskPriorities, isEditMode]);
+
+  // Cargar datos de la tarea existente cuando estemos en modo de edición
+  useEffect(() => {
+    if (existingTask) {
+      setIsEditMode(true);
+      console.log("📝 Cargando datos de tarea existente:", existingTask);
+      
+      // Cargar datos del formulario inmediatamente con los valores de la tarea existente
+      setFormData({
+        name: existingTask.name || '',
+        description: existingTask.description || '',
+        startDate: existingTask.startDate ? existingTask.startDate.toString() : '',
+        endDate: existingTask.endDate ? existingTask.endDate.toString() : '',
+        timeInvested: existingTask.timeInvested || 0,
+        percentageProgress: existingTask.percentageProgress || 0,
+        budget: existingTask.budget || 0,
+        cost: existingTask.cost || 0,
+        score: existingTask.score || 0,
+        feedback: existingTask.feedback || '',
+        IDPhaseRef: phaseId,
+        IDTaskStatusRef: existingTask.taskStatus?.idTaskStatus || 0,
+        IDTaskPriorityRef: existingTask.taskPriority?.idTaskPriority || 0,
+        IDUserRef: existingTask.IDUserRef || 0
+      });
+      
+      console.log("✅ Datos de tarea cargados en formulario");
+      console.log("🔍 FormData actualizado:", {
+        name: existingTask.name,
+        description: existingTask.description,
+        IDTaskStatusRef: existingTask.taskStatus?.idTaskStatus,
+        IDTaskPriorityRef: existingTask.taskPriority?.idTaskPriority
+      });
+    } else {
+      setIsEditMode(false);
+    }
+  }, [existingTask, phaseId]);
+
+  // Actualizar datos del formulario cuando se carguen los estados y prioridades en modo de edición
+  useEffect(() => {
+    if (existingTask && dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0) {
+      console.log("🔄 Actualizando datos del formulario con estados y prioridades cargados");
+      
+      // Actualizar solo los campos que dependen de los datos cargados
+      setFormData(prev => ({
+        ...prev,
+        IDTaskStatusRef: existingTask.taskStatus?.idTaskStatus || prev.IDTaskStatusRef,
+        IDTaskPriorityRef: existingTask.taskPriority?.idTaskPriority || prev.IDTaskPriorityRef,
+      }));
+      
+      console.log("✅ Formulario actualizado con estados y prioridades");
+    }
+  }, [existingTask, dataLoaded, taskStatuses, taskPriorities]);
 
   // Cargar información del archivo si existe una tarea
   useEffect(() => {
@@ -309,70 +384,128 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         return;
       }
 
-      // Preparar datos según el formato esperado por el backend
-      const taskData = {
-        name: formData.name,
-        description: formData.description || null,
-        startDate: formData.startDate || null,
-        endDate: formData.endDate || null,
-        timeInvested: formData.timeInvested || 0,
-        percentageProgress: formData.percentageProgress || 0,
-        budget: formData.budget || 0,
-        cost: formData.cost || 0,
-        score: formData.score || 0,
-        feedback: formData.feedback || null,
-        phaseId: formData.IDPhaseRef, // ✅ Parámetro correcto según error del backend
-        statusName: selectedStatus.name, // ✅ Nombre textual como requiere el backend
-        priorityName: selectedPriority.name, // ✅ Nombre textual como requiere el backend
-        userId: formData.IDUserRef // ✅ Parámetro correcto
-      };
-      
-      console.log("📤 Datos preparados para el backend:", taskData);
-      console.log("🔍 Estado seleccionado:", selectedStatus);
-      console.log("🔍 Prioridad seleccionada:", selectedPriority);
-      console.log("🔍 statusName:", selectedStatus.name);
-      console.log("🔍 priorityName:", selectedPriority.name);
-      
-      // Si hay archivo seleccionado, usar el endpoint de creación con archivo
-      if (selectedFile) {
-        console.log("📎 Creando tarea con archivo:", selectedFile.name);
-        const formDataWithFile = new FormData();
-        formDataWithFile.append('file', selectedFile);
+      if (isEditMode && existingTask) {
+        // Modo de edición - actualizar tarea existente
+        console.log("📝 Actualizando tarea existente:", existingTask.idTask);
         
-        // Agregar campos con nombres correctos
-        Object.keys(taskData).forEach(key => {
-          const value = taskData[key as keyof typeof taskData];
-          if (value !== null && value !== undefined) {
-            formDataWithFile.append(key, value.toString());
-          }
-        });
+        // Preparar datos para actualización
+        const updateData = {
+          name: formData.name,
+          description: formData.description || undefined,
+          startDate: formData.startDate || undefined,
+          endDate: formData.endDate || undefined,
+          timeInvested: formData.timeInvested || 0,
+          percentageProgress: formData.percentageProgress || 0,
+          budget: formData.budget || 0,
+          cost: formData.cost || 0,
+          score: formData.score || 0,
+          feedback: formData.feedback || undefined,
+          iduser: formData.IDUserRef, // Usar nombres del backend (minúsculas)
+          idphaseRef: formData.IDPhaseRef,
+          idtaskStatusRef: formData.IDTaskStatusRef,
+          idtaskPriorityRef: formData.IDTaskPriorityRef
+        };
         
-        console.log("📤 FormData keys:", Array.from(formDataWithFile.keys()));
-        console.log("📤 FormData values:");
-        for (let [key, value] of formDataWithFile.entries()) {
-          console.log(`  ${key}: ${value}`);
+        console.log("📤 Datos de actualización:", updateData);
+        
+        // Actualizar la tarea
+        const updatedTask = await taskService.updateTask(existingTask.idTask!, updateData);
+        
+        // Si hay archivo seleccionado, subirlo por separado
+        if (selectedFile) {
+          console.log("📎 Subiendo archivo para tarea actualizada:", selectedFile.name);
+          const formDataWithFile = new FormData();
+          formDataWithFile.append('file', selectedFile);
+          
+          await taskService.updateTaskWithFile(existingTask.idTask!, formDataWithFile);
         }
         
-        // Usar endpoint de creación con archivo
-        const newTask = await taskService.createTaskWithFile(formDataWithFile);
-        onTaskCreated(newTask);
-      } else {
-        console.log("📝 Creando tarea sin archivo");
+        // Notificar que la tarea fue actualizada
+        if (onTaskUpdated) {
+          onTaskUpdated(updatedTask);
+        }
         
-        // Crear la tarea sin archivo usando el endpoint correcto
-        const newTask = await taskService.createTask(taskData);
-        onTaskCreated(newTask);
+        // Recargar la lista de tareas para mostrar los cambios
+        if (onRefreshTasks) {
+          console.log("🔄 Recargando lista de tareas después de actualizar");
+          onRefreshTasks();
+        }
+        
+        alert("✅ Tarea actualizada correctamente");
+      } else {
+        // Modo de creación - crear nueva tarea
+        console.log("➕ Creando nueva tarea");
+        
+        // Preparar datos según el formato esperado por el backend
+        const taskData = {
+          name: formData.name,
+          description: formData.description || undefined,
+          startDate: formData.startDate || undefined,
+          endDate: formData.endDate || undefined,
+          timeInvested: formData.timeInvested || 0,
+          percentageProgress: formData.percentageProgress || 0,
+          budget: formData.budget || 0,
+          cost: formData.cost || 0,
+          score: formData.score || 0,
+          feedback: formData.feedback || undefined,
+          phaseId: formData.IDPhaseRef, // ✅ Parámetro correcto según error del backend
+          statusName: selectedStatus.name, // ✅ Nombre textual como requiere el backend
+          priorityName: selectedPriority.name, // ✅ Nombre textual como requiere el backend
+          userId: formData.IDUserRef // ✅ Parámetro correcto
+        };
+        
+        console.log("📤 Datos preparados para el backend:", taskData);
+        console.log("🔍 Estado seleccionado:", selectedStatus);
+        console.log("🔍 Prioridad seleccionada:", selectedPriority);
+        console.log("🔍 statusName:", selectedStatus.name);
+        console.log("🔍 priorityName:", selectedPriority.name);
+        
+        // Si hay archivo seleccionado, usar el endpoint de creación con archivo
+        if (selectedFile) {
+          console.log("📎 Creando tarea con archivo:", selectedFile.name);
+          const formDataWithFile = new FormData();
+          formDataWithFile.append('file', selectedFile);
+          
+          // Agregar campos con nombres correctos
+          Object.keys(taskData).forEach(key => {
+            const value = taskData[key as keyof typeof taskData];
+            if (value !== null && value !== undefined) {
+              formDataWithFile.append(key, value.toString());
+            }
+          });
+          
+          console.log("📤 FormData keys:", Array.from(formDataWithFile.keys()));
+          console.log("📤 FormData values:");
+          for (let [key, value] of formDataWithFile.entries()) {
+            console.log(`  ${key}: ${value}`);
+          }
+          
+          // Usar endpoint de creación con archivo
+          const newTask = await taskService.createTaskWithFile(formDataWithFile);
+          onTaskCreated(newTask);
+        } else {
+          console.log("📝 Creando tarea sin archivo");
+          
+          // Crear la tarea sin archivo usando el endpoint correcto
+          const newTask = await taskService.createTask(taskData);
+          onTaskCreated(newTask);
+        }
+        
+        // Recargar la lista de tareas para mostrar la nueva tarea
+        if (onRefreshTasks) {
+          console.log("🔄 Recargando lista de tareas después de crear");
+          onRefreshTasks();
+        }
+        
+        alert("✅ Tarea creada correctamente");
       }
-      
-      // Mostrar mensaje de éxito
-      alert("✅ Tarea creada correctamente");
       
       // Cerrar el modal
       onClose();
       
     } catch (error) {
-      console.error("Error creando tarea:", error);
-      alert(`❌ Error al crear la tarea: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      console.error("Error procesando tarea:", error);
+      alert(`❌ Error al ${isEditMode ? 'actualizar' : 'crear'} la tarea: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -440,6 +573,50 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
     }
   };
 
+  const handleDeleteTask = async () => {
+    if (!existingTask || !existingTask.idTask) {
+      alert("❌ No hay tarea para eliminar");
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que quieres eliminar la tarea "${existingTask.name}"?\n\nEsta acción marcará la tarea como eliminada (borrado lógico).`
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log("🗑️ Eliminando tarea:", existingTask.idTask);
+      
+      await taskService.deleteTask(existingTask.idTask);
+      
+      // Notificar que la tarea fue eliminada
+      if (onTaskDeleted) {
+        onTaskDeleted(existingTask.idTask);
+      }
+      
+      // Recargar la lista de tareas para mostrar que se eliminó
+      if (onRefreshTasks) {
+        console.log("🔄 Recargando lista de tareas después de eliminar");
+        onRefreshTasks();
+      }
+      
+      alert("✅ Tarea eliminada correctamente");
+      
+      // Cerrar el modal
+      onClose();
+      
+    } catch (error) {
+      console.error("❌ Error eliminando tarea:", error);
+      alert(`❌ Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
@@ -459,33 +636,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
           </p>
         </div>
 
-        {loading && !dataLoaded ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Cargando datos del backend...</p>
-            <p className="text-sm text-gray-400 mt-2">Estados, prioridades y usuarios</p>
-          </div>
-        ) : (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center gap-2 text-green-700">
-              <span className="text-sm">✅</span>
-              <span className="text-sm font-medium">Datos cargados correctamente</span>
-            </div>
-            <div className="text-xs text-green-600 mt-1">
-              Estados: {taskStatuses.length} | Prioridades: {taskPriorities.length} | Usuarios: {users.length}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Estado seleccionado: {formData.IDTaskStatusRef || 'No seleccionado'} | Prioridad seleccionada: {formData.IDTaskPriorityRef || 'No seleccionada'} | Usuario: {formData.IDUserRef || 'No seleccionado'}
-            </div>
-            <div className="text-xs text-blue-600 mt-1">
-              {formData.IDTaskStatusRef === 0 && "⚠️ Estado no establecido"} 
-              {formData.IDTaskPriorityRef === 0 && "⚠️ Prioridad no establecida"}
-            </div>
-          </div>
-        )}
-        
-        {dataLoaded && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Mostrar formulario directamente */}
+        <form onSubmit={handleSubmit} className="space-y-6">
             {/* Debug info */}
             <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
               <div>🔍 Debug - Estado actual: {formData.IDTaskStatusRef}</div>
@@ -804,34 +956,57 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
           )}
 
           {/* Botones */}
-          <div className="flex justify-end gap-3 pt-6 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 px-4 py-2 rounded-lg transition-colors duration-200"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  {existingTask ? "Actualizando..." : "Creando..."}
-                </>
-              ) : (
-                <>
-                  {existingTask ? "💾 Actualizar Tarea" : "➕ Crear Tarea"}
-                </>
-              )}
-            </button>
+          <div className="flex justify-between pt-6 border-t">
+            {/* Botón de eliminar (solo en modo de edición) */}
+            {isEditMode && existingTask && (
+              <button
+                type="button"
+                onClick={handleDeleteTask}
+                disabled={loading}
+                className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    🗑️ Eliminar Tarea
+                  </>
+                )}
+              </button>
+            )}
+            
+            {/* Botones principales */}
+            <div className="flex gap-3 ml-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 px-4 py-2 rounded-lg transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    {isEditMode ? "Actualizando..." : "Creando..."}
+                  </>
+                ) : (
+                  <>
+                    {isEditMode ? "💾 Actualizar Tarea" : "➕ Crear Tarea"}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
-        )}
       </div>
     </div>
   );

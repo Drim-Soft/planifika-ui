@@ -20,6 +20,8 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [downloadingFiles, setDownloadingFiles] = useState<Set<number>>(new Set());
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [editForm, setEditForm] = useState({
     name: phase.name,
     description: phase.description || '',
@@ -56,52 +58,15 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
       
       try {
         setLoading(true);
+        console.log("🔄 Cargando tareas para fase:", phaseId);
         const phaseTasks = await taskService.getTasksByPhase(phaseId);
+        console.log("✅ Tareas cargadas:", phaseTasks.length);
         setTasks(phaseTasks);
       } catch (err) {
-        console.error("Error cargando tareas:", err);
-        // Por ahora, usar datos mock si no hay endpoint
-        setTasks([
-          {
-            idTask: 1,
-            name: "Diseño de interfaz",
-            description: "Crear mockups de la interfaz principal",
-            percentageProgress: 75,
-            taskStatus: { idTaskStatus: 1, name: "En Progreso" },
-            taskPriority: { idTaskPriority: 2, name: "Media" },
-            user: { idUser: 1, name: "Juan Pérez" },
-            fileURL: "https://ejemplo.com/archivos/mockup_interfaz.pdf"
-          },
-          {
-            idTask: 2,
-            name: "Implementación backend",
-            description: "Desarrollar APIs del sistema",
-            percentageProgress: 45,
-            taskStatus: { idTaskStatus: 1, name: "En Progreso" },
-            taskPriority: { idTaskPriority: 1, name: "Alta" },
-            user: { idUser: 2, name: "María García" },
-            fileURL: "https://ejemplo.com/archivos/api_documentation.docx"
-          },
-          {
-            idTask: 3,
-            name: "Testing",
-            description: "Pruebas unitarias y de integración",
-            percentageProgress: 0,
-            taskStatus: { idTaskStatus: 3, name: "Pendiente" },
-            taskPriority: { idTaskPriority: 3, name: "Baja" },
-            user: { idUser: 1, name: "Juan Pérez" }
-          },
-          {
-            idTask: 4,
-            name: "Documentación técnica",
-            description: "Crear documentación completa del proyecto",
-            percentageProgress: 90,
-            taskStatus: { idTaskStatus: 2, name: "Completada" },
-            taskPriority: { idTaskPriority: 2, name: "Media" },
-            user: { idUser: 3, name: "Carlos López" },
-            fileURL: "https://ejemplo.com/archivos/documentacion_tecnica.pdf"
-          }
-        ]);
+        console.error("❌ Error cargando tareas:", err);
+        // En lugar de usar datos mock, mostrar lista vacía y permitir crear tareas
+        setTasks([]);
+        alert(`Error cargando tareas: ${err instanceof Error ? err.message : 'Error desconocido'}`);
       } finally {
         setLoading(false);
       }
@@ -212,21 +177,85 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
 
   // Función para manejar la creación de una nueva tarea
   const handleTaskCreated = (newTask: Task) => {
-    setTasks((prev: Task[]) => [...prev, newTask]);
+    console.log("➕ Nueva tarea creada, recargando lista...");
+    reloadTasks(); // Recargar desde el backend
     setShowCreateTaskModal(false);
+  };
+
+  // Función para manejar la actualización de una tarea
+  const handleTaskUpdated = (updatedTask: Task) => {
+    console.log("📝 Tarea actualizada, recargando lista...");
+    reloadTasks(); // Recargar desde el backend
+    setShowEditTaskModal(false);
+    setSelectedTask(null);
+  };
+
+  // Función para manejar la eliminación de una tarea
+  const handleTaskDeleted = (taskId: number) => {
+    console.log("🗑️ Tarea eliminada, recargando lista...");
+    reloadTasks(); // Recargar desde el backend
+    setShowEditTaskModal(false);
+    setSelectedTask(null);
+  };
+
+  // Función para abrir modal de edición de tarea
+  const handleEditTask = (task: Task) => {
+    console.log("📝 Abriendo modal de edición para:", task.name);
+    setSelectedTask(task);
+    setShowEditTaskModal(true);
+  };
+
+  // Función para eliminar una tarea
+  const handleDeleteTask = async (task: Task) => {
+    if (!task.idTask) {
+      alert("❌ No se puede identificar la tarea a eliminar");
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que quieres eliminar la tarea "${task.name}"?\n\nEsta acción marcará la tarea como eliminada (borrado lógico).`
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log("🗑️ Eliminando tarea:", task.idTask);
+      
+      await taskService.deleteTask(task.idTask);
+      
+      console.log("✅ Tarea eliminada correctamente");
+      
+      // Recargar la lista de tareas para mostrar que se eliminó
+      reloadTasks();
+      
+    } catch (error) {
+      console.error("❌ Error eliminando tarea:", error);
+      alert(`❌ Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Función para recargar las tareas
   const reloadTasks = async () => {
     const phaseId = getPhaseId();
-    if (!phaseId) return;
+    if (!phaseId) {
+      console.log("⚠️ No se puede recargar tareas: ID de fase no válido");
+      return;
+    }
     
     try {
+      console.log("🔄 Recargando tareas para fase:", phaseId);
       setLoading(true);
       const phaseTasks = await taskService.getTasksByPhase(phaseId);
+      console.log("✅ Tareas recargadas:", phaseTasks.length);
       setTasks(phaseTasks);
     } catch (err) {
-      console.error("Error recargando tareas:", err);
+      console.error("❌ Error recargando tareas:", err);
+      alert(`Error recargando tareas: ${err instanceof Error ? err.message : 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -581,14 +610,16 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
 
                     <div className="flex gap-2 ml-4">
                       <button
-                        onClick={() => alert(`Editar tarea: ${task.name}`)}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs transition-all duration-200"
+                        onClick={() => handleEditTask(task)}
+                        disabled={loading}
+                        className="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs transition-all duration-200"
                       >
                         ✏️ Editar
                       </button>
                       <button
-                        onClick={() => alert(`Eliminar tarea: ${task.name}`)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs transition-all duration-200"
+                        onClick={() => handleDeleteTask(task)}
+                        disabled={loading}
+                        className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs transition-all duration-200"
                       >
                         🗑️ Eliminar
                       </button>
@@ -617,6 +648,26 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
           phaseName={phase.name}
           onClose={() => setShowCreateTaskModal(false)}
           onTaskCreated={handleTaskCreated}
+          onTaskUpdated={handleTaskUpdated}
+          onTaskDeleted={handleTaskDeleted}
+          onRefreshTasks={reloadTasks}
+        />
+      )}
+
+      {/* Modal para editar tarea existente */}
+      {showEditTaskModal && selectedTask && (
+        <CreateTaskModal
+          phaseId={getPhaseId() || 0}
+          phaseName={phase.name}
+          onClose={() => {
+            setShowEditTaskModal(false);
+            setSelectedTask(null);
+          }}
+          onTaskCreated={handleTaskCreated}
+          onTaskUpdated={handleTaskUpdated}
+          onTaskDeleted={handleTaskDeleted}
+          onRefreshTasks={reloadTasks}
+          existingTask={selectedTask}
         />
       )}
     </div>
