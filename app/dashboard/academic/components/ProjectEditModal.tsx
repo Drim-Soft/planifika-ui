@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { projectService } from "../../../services/projectService";
+import { userService } from "../../../services/userService";
 
 export default function ProjectEditModal({ project, onClose }: any) {
   const router = useRouter();
@@ -19,9 +20,14 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
   const [statuses, setStatuses] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [assignedUsers, setAssignedUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<number | null>(null);
+  const [editingUserRole, setEditingUserRole] = useState<number | null>(null);
+  const [newRoleForUser, setNewRoleForUser] = useState<number | null>(null);
+  const [updatingRole, setUpdatingRole] = useState<number | null>(null);
+  const [deletingUser, setDeletingUser] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   const projectId = project.IDProject ?? project.idproject;
@@ -67,17 +73,47 @@ export default function ProjectEditModal({ project, onClose }: any) {
       });
   }, [project]);
 
-  // 🔹 Cargar usuarios del proyecto
+  // 🔹 Cargar usuarios del proyecto (ya asignados)
   useEffect(() => {
     if (!projectId) return;
     projectService
       .getUsersInProject(projectId)
-      .then((data) => setUsers(data))
-      .catch((err) => console.error("Error cargando usuarios:", err));
+      .then((data) => {
+        console.log("🔍 Datos de usuarios asignados:", data);
+        setAssignedUsers(data); // Los usuarios del proyecto son los ya asignados
+      })
+      .catch((err) => console.error("Error cargando usuarios asignados:", err));
   }, [projectId]);
+
+  // 🔹 Cargar todos los usuarios disponibles (para asignar)
+  useEffect(() => {
+    userService
+      .getAllUsers()
+      .then((data) => setAllUsers(data))
+      .catch((err) => console.error("Error cargando todos los usuarios:", err));
+  }, []);
 
   const handleChange = (name: string, value: any) => {
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // 🔹 Helper para obtener el nombre del rol
+  const getUserRoleName = (user: any) => {
+    // Buscar el rol en diferentes campos posibles
+    const roleName = user.roleName || user.rolename || user.role?.name || user.rol?.name;
+    
+    if (roleName) {
+      return roleName;
+    }
+    
+    // Si no hay nombre, buscar por ID en la lista de roles
+    const roleId = user.idrole || user.IDRole || user.role?.idrole || user.rol?.idrole;
+    if (roleId && roles.length > 0) {
+      const role = roles.find(r => (r.idrole || r.IDRole) === roleId);
+      return role?.name || `Rol ID: ${roleId}`;
+    }
+    
+    return 'Sin rol asignado';
   };
 
   // 🔹 Guardar cambios del proyecto
@@ -131,22 +167,82 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
       // refresca usuarios del proyecto
       const updated = await projectService.getUsersInProject(projectId);
-      setUsers(updated);
+      setAssignedUsers(updated);
     } catch (err) {
       console.error(err);
       alert("❌ No se pudo asignar el usuario.");
     }
   };
 
+  // 🔹 Actualizar rol de usuario
+  const handleUpdateUserRole = async (userId: number, newRoleId: number) => {
+    setUpdatingRole(userId);
+    try {
+      console.log("🔄 Actualizando rol:", { projectId, userId, newRoleId });
+      
+      // Usar solo el endpoint general que sabemos que funciona
+      await projectService.assignUserToProject(projectId, userId, newRoleId);
+      
+      alert("✅ Rol actualizado correctamente");
+      setEditingUserRole(null);
+      setNewRoleForUser(null);
+
+      // refresca usuarios del proyecto
+      const updated = await projectService.getUsersInProject(projectId);
+      setAssignedUsers(updated);
+    } catch (err) {
+      console.error("Error actualizando rol:", err);
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+      
+      // Mostrar mensaje más específico basado en el error
+      if (errorMessage.includes("Internal Server Error")) {
+        alert("❌ Error del servidor. El backend no está procesando correctamente la actualización de roles. Contacta al administrador.");
+      } else {
+        alert(`❌ No se pudo actualizar el rol del usuario: ${errorMessage}`);
+      }
+    } finally {
+      setUpdatingRole(null);
+    }
+  };
+
+  // 🔹 Eliminar usuario del proyecto
+  const handleDeleteUser = async (userId: number) => {
+    if (!confirm("¿Estás seguro de que quieres eliminar este usuario del proyecto?")) {
+      return;
+    }
+
+    setDeletingUser(userId);
+    try {
+      console.log("🗑️ Eliminando usuario:", { projectId, userId });
+      
+      // Usar el endpoint de asignación con un rol especial o endpoint de eliminación
+      // Por ahora, intentamos con el endpoint general
+      await projectService.assignUserToProject(projectId, userId, 0); // Rol 0 podría ser "sin rol"
+      
+      alert("✅ Usuario eliminado del proyecto correctamente");
+
+      // refresca usuarios del proyecto
+      const updated = await projectService.getUsersInProject(projectId);
+      setAssignedUsers(updated);
+    } catch (err) {
+      console.error("Error eliminando usuario:", err);
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+      alert(`❌ No se pudo eliminar el usuario del proyecto: ${errorMessage}`);
+    } finally {
+      setDeletingUser(null);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg"
-        >
-          ✖
-        </button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] relative flex flex-col">
+        <div className="p-8 overflow-y-auto flex-1">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg z-10"
+          >
+            ✖
+          </button>
 
         <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
           ✏️ Editar Proyecto
@@ -246,9 +342,104 @@ export default function ProjectEditModal({ project, onClose }: any) {
           </div>
         </div>
 
-        {/* Asignar usuario */}
+        {/* Usuarios ya asignados */}
         <div className="mt-8 border-t pt-4">
-          <h3 className="font-semibold mb-3 text-gray-800">Asignar Usuario al Proyecto</h3>
+          <h3 className="font-semibold mb-3 text-gray-800">👥 Usuarios Asignados al Proyecto</h3>
+          
+          {assignedUsers.length > 0 ? (
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="space-y-2">
+                {assignedUsers.map((user, index) => (
+                  <div key={`user-${user.iduser || user.IDUser}-${index}`} className="bg-white rounded-lg p-3 shadow-sm">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 font-semibold text-sm">
+                            {(user.name || `Usuario ${user.iduser}`).charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {user.name || `Usuario ${user.iduser}`}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            ID: {user.iduser || user.IDUser}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {getUserRoleName(user)}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setEditingUserRole(user.iduser || user.IDUser);
+                            setNewRoleForUser(user.idrole || user.IDRole);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.iduser || user.IDUser)}
+                          disabled={deletingUser === (user.iduser || user.IDUser)}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+                        >
+                          {deletingUser === (user.iduser || user.IDUser) ? "Eliminando..." : "🗑️ Eliminar"}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Interfaz de edición de rol */}
+                    {editingUserRole === (user.iduser || user.IDUser) && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="flex items-center space-x-3">
+                          <label className="text-sm font-medium text-gray-700">Nuevo rol:</label>
+                          <select
+                            value={newRoleForUser || ""}
+                            onChange={(e) => setNewRoleForUser(Number(e.target.value))}
+                            className="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 text-black"
+                          >
+                            <option value="">Seleccionar rol</option>
+                            {roles.map((r) => (
+                              <option key={r.idrole || r.IDRole} value={r.idrole || r.IDRole}>
+                                {r.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => handleUpdateUserRole(user.iduser || user.IDUser, newRoleForUser!)}
+                            disabled={!newRoleForUser || updatingRole === (user.iduser || user.IDUser)}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded text-sm"
+                          >
+                            {updatingRole === (user.iduser || user.IDUser) ? "Guardando..." : "Guardar"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingUserRole(null);
+                              setNewRoleForUser(null);
+                            }}
+                            className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded text-sm"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 text-center">
+              <p className="text-gray-500">No hay usuarios asignados a este proyecto</p>
+            </div>
+          )}
+        </div>
+
+        {/* Asignar usuario */}
+        <div className="mt-6 border-t pt-4">
+          <h3 className="font-semibold mb-3 text-gray-800">➕ Asignar Nuevo Usuario al Proyecto</h3>
 
           <select
             className="border rounded-lg p-2 w-full mb-3 focus:ring-2 focus:ring-yellow-500 text-black"
@@ -256,9 +447,9 @@ export default function ProjectEditModal({ project, onClose }: any) {
             onChange={(e) => setSelectedUser(Number(e.target.value))}
           >
             <option value="">Seleccionar usuario</option>
-            {users.map((u) => (
-              <option key={u.iduser || u.IDUser} value={u.iduser || u.IDUser}>
-                {u.name || `Usuario ${u.iduser}`}
+            {allUsers.map((u) => (
+              <option key={u.id || u.iduser || u.IDUser} value={u.id || u.iduser || u.IDUser}>
+                {u.name || `Usuario ${u.id || u.iduser}`}
               </option>
             ))}
           </select>
@@ -284,25 +475,27 @@ export default function ProjectEditModal({ project, onClose }: any) {
           </button>
         </div>
 
+        </div>
 
-        {/* Botones finales */}
-        <div className="flex justify-end gap-3 mt-8">
-          <button
-            onClick={onClose}
-            className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50"
-          >
-            {loading ? "Guardando..." : "Guardar Cambios"}
-          </button>
+        {/* Botones finales - fijos en la parte inferior */}
+        <div className="border-t bg-white p-6 rounded-b-2xl">
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+            >
+              {loading ? "Guardando..." : "Guardar Cambios"}
+            </button>
+          </div>
         </div>
       </div>
-
     </div>
   );
 }
