@@ -238,7 +238,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
 
   // Establecer valores por defecto cuando se carguen los datos (solo en modo creación)
   useEffect(() => {
-    if (dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0 && !isEditMode) {
+    if (dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0 && !isEditMode && !existingTask) {
       console.log("🔄 Estableciendo valores por defecto después de cargar datos (modo creación)");
       console.log("🔍 Estado actual:", formData.IDTaskStatusRef);
       console.log("🔍 Prioridad actual:", formData.IDTaskPriorityRef);
@@ -267,7 +267,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         console.log("🔍 Nueva prioridad:", updatedData.IDTaskPriorityRef);
       }
     }
-  }, [dataLoaded, taskStatuses, taskPriorities, isEditMode]);
+  }, [dataLoaded, taskStatuses, taskPriorities, isEditMode, existingTask]);
 
   // Cargar datos de la tarea existente cuando estemos en modo de edición
   useEffect(() => {
@@ -309,17 +309,32 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   useEffect(() => {
     if (existingTask && dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0) {
       console.log("🔄 Actualizando datos del formulario con estados y prioridades cargados");
+      console.log("🔍 Tarea existente:", existingTask);
+      console.log("🔍 Estados disponibles:", taskStatuses);
+      console.log("🔍 Prioridades disponibles:", taskPriorities);
       
-      // Actualizar solo los campos que dependen de los datos cargados
+      // Actualizar todos los campos de la tarea existente
       setFormData(prev => ({
         ...prev,
+        name: existingTask.name || prev.name,
+        description: existingTask.description || prev.description,
+        startDate: existingTask.startDate ? existingTask.startDate.toString() : prev.startDate,
+        endDate: existingTask.endDate ? existingTask.endDate.toString() : prev.endDate,
+        timeInvested: existingTask.timeInvested || prev.timeInvested,
+        percentageProgress: existingTask.percentageProgress || prev.percentageProgress,
+        budget: existingTask.budget || prev.budget,
+        cost: existingTask.cost || prev.cost,
+        score: existingTask.score || prev.score,
+        feedback: existingTask.feedback || prev.feedback,
+        IDPhaseRef: phaseId,
         IDTaskStatusRef: existingTask.taskStatus?.idTaskStatus || prev.IDTaskStatusRef,
         IDTaskPriorityRef: existingTask.taskPriority?.idTaskPriority || prev.IDTaskPriorityRef,
+        IDUserRef: existingTask.IDUserRef || prev.IDUserRef
       }));
       
-      console.log("✅ Formulario actualizado con estados y prioridades");
+      console.log("✅ Formulario actualizado con todos los datos de la tarea");
     }
-  }, [existingTask, dataLoaded, taskStatuses, taskPriorities]);
+  }, [existingTask, dataLoaded, taskStatuses, taskPriorities, phaseId]);
 
   // Cargar información del archivo si existe una tarea
   useEffect(() => {
