@@ -232,40 +232,77 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await authService.externalLogin(data);
       console.log('External login response:', response);
       
-      // Para login externo, no intentar obtener info del usuario con /auth/me
-      // porque el token de Supabase SIU no es compatible con ese endpoint
-      // En su lugar, usar la información básica del email
+      console.log('=== VERIFICANDO RESPUESTA DE LOGIN ===');
+      console.log('¿Tiene user?', response.user ? 'SÍ' : 'NO');
+      console.log('¿Tiene access_token?', response.access_token ? 'SÍ' : 'NO');
+      console.log('Response.user completo:', response.user);
+      console.log('=====================================');
       
-      // Para login externo (estudiantes), forzar userType 3 (COLLABORATOR)
-      const finalRole = UserRole.COLLABORATOR; // Siempre 3 para estudiantes
-      console.log('Forzando role COLLABORATOR (3) para login externo de estudiante');
+      // El backend ya devuelve los datos del usuario directamente en response.user
+      // No necesitamos hacer una consulta adicional
+      let userInfo: any = response.user;
       
-      // Función para convertir email prefix a nombre legible
-      const formatEmailToName = (email: string): string => {
-        const prefix = email.split('@')[0];
-        if (!prefix) return 'Usuario Externo';
-        
-        // Convertir guiones bajos y puntos a espacios
-        const formatted = prefix
-          .replace(/[._]/g, ' ')
-          .split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ');
-        
-        return formatted || 'Usuario Externo';
-      };
+      console.log('=== DATOS DEL USUARIO OBTENIDOS ===');
+      console.log('userInfo:', userInfo);
+      console.log('idUser:', userInfo?.idUser);
+      console.log('name:', userInfo?.name);
+      console.log('email:', userInfo?.email);
+      console.log('photoUrl:', userInfo?.photoUrl);
+      console.log('idUserType:', userInfo?.idUserType);
+      console.log('idUserStatus:', userInfo?.idUserStatus);
+      console.log('idOrganization:', userInfo?.idOrganization);
+      console.log('===================================');
       
-      // Crear objeto usuario con información básica
+      // Verificar que tenemos los datos necesarios
+      if (!userInfo || !userInfo.idUser) {
+        console.error('=== ERROR: DATOS DE USUARIO INCOMPLETOS ===');
+        console.error('userInfo:', userInfo);
+        console.error('===========================================');
+        throw new Error('No se obtuvieron los datos completos del usuario');
+      }
+      
+      // Determinar el role correcto
+      const userRoleValue = userInfo.idUserType;
+      console.log('Raw userRoleValue from backend:', userRoleValue);
+      
+      let finalRole: UserRole;
+      if (userRoleValue !== undefined && userRoleValue !== null) {
+        finalRole = userRoleValue as UserRole;
+      } else {
+        // Fallback para estudiantes externos
+        finalRole = UserRole.COLLABORATOR;
+      }
+      
+      // Crear objeto usuario con información real del backend
+      // Mapear los campos del backend a los campos del frontend
       const userData: User = {
-        id: 1, // ID temporal, se actualizará cuando se cree el usuario en la BD
-        name: formatEmailToName(data.email), // Convertir email a nombre legible
-        email: data.email,
-        photoUrl: '',
+        id: userInfo.idUser || 0,
+        name: userInfo.name || '',
+        email: data.email, // El email viene del login, no del backend
+        photoUrl: userInfo.photoUrl || '',
         role: finalRole,
-        status: 1, // ACTIVE
-        organizationId: undefined,
-        supabaseUserId: response.user?.id || '0',
+        status: userInfo.idUserStatus || 1,
+        organizationId: userInfo.idOrganization || undefined,
+        supabaseUserId: userInfo.supabaseUserId || '0', // Usar el supabaseUserId del backend
       };
+      
+      console.log('=== DATOS FINALES DEL USUARIO ===');
+      console.log('ID del usuario:', userData.id);
+      console.log('Nombre:', userData.name);
+      console.log('Email:', userData.email);
+      console.log('Rol:', userData.role);
+      console.log('Estado:', userData.status);
+      console.log('Organización:', userData.organizationId);
+      console.log('Supabase ID:', userData.supabaseUserId);
+      console.log('================================');
+      
+      console.log('=== VERIFICACIÓN DE DATOS ===');
+      console.log('¿ID es válido?', userData.id > 0 ? 'SÍ' : 'NO');
+      console.log('¿Nombre está presente?', userData.name ? 'SÍ' : 'NO');
+      console.log('¿Email está presente?', userData.email ? 'SÍ' : 'NO');
+      console.log('¿Rol está definido?', userData.role !== undefined ? 'SÍ' : 'NO');
+      console.log('¿Supabase ID está presente?', userData.supabaseUserId ? 'SÍ' : 'NO');
+      console.log('==============================');
       
       console.log('Final external user data:', userData);
       console.log('Final role value:', userData.role);
@@ -273,11 +310,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Guardar en localStorage
       localStorage.setItem('planifika_user', JSON.stringify(userData));
       localStorage.setItem('planifika_token', response.access_token);
+      
+      console.log('=== GUARDADO EN LOCALSTORAGE ===');
+      console.log('Usuario guardado:', JSON.stringify(userData));
+      console.log('Token guardado:', response.access_token ? 'Presente' : 'Ausente');
+      console.log('===============================');
 
       setUser(userData);
+      
+      console.log('=== ESTADO ACTUALIZADO ===');
+      console.log('Usuario asignado al estado:', userData);
+      console.log('¿Usuario está presente?', userData ? 'SÍ' : 'NO');
+      console.log('==========================');
 
       // Redireccionar al dashboard académico
+      console.log('=== REDIRECCIÓN ===');
+      console.log('Redirigiendo a:', '/dashboard/academic');
+      console.log('==================');
+      
       router.push('/dashboard/academic');
+      
+      console.log('=== LOGIN EXTERNO COMPLETADO ===');
+      console.log('Redirección ejecutada exitosamente');
+      console.log('================================');
 
       return response;
     } catch (error) {
