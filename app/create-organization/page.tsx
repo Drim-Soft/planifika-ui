@@ -10,7 +10,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { UserRole } from "../types/auth";
 
 export default function CreateOrganization() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(true);
 
@@ -89,12 +89,26 @@ export default function CreateOrganization() {
               </h1>
               <p className="text-gray-600 mt-1">Gestión de Organizaciones</p>
             </div>
-            <Link
-              href="/"
-              className="planifika-button-secondary flex items-center gap-2"
-            >
-              ← Volver al Inicio
-            </Link>
+            <div className="flex items-center gap-4">
+              <span className="text-gray-600 text-sm">
+                Bienvenido, {user?.name || 'Administrador'}
+              </span>
+              <button
+                onClick={logout}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Cerrar Sesión
+              </button>
+              <Link
+                href="/"
+                className="planifika-button-secondary flex items-center gap-2"
+              >
+                ← Volver al Inicio
+              </Link>
+            </div>
           </div>
         </div>
       </div>

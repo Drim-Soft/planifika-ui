@@ -219,6 +219,18 @@ export default function AdminLogin() {
                 </Link>
               </p>
             </div>
+            <div className="pt-2 border-t border-gray-200">
+              <p className="text-sm text-gray-600 mb-2">
+                ¿Eres estudiante?
+              </p>
+              <Link 
+                href="/pages/student-login" 
+                className="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+              >
+                <span className="mr-2">🎓</span>
+                Ir al Login de Estudiante
+              </Link>
+            </div>
           </div>
 
           </div>
