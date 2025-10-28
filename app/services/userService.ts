@@ -16,6 +16,7 @@ class UserService {
     signal: AbortSignal.timeout(API_CONFIG_USERS_PLANIFIKA.TIMEOUT),
     ...options,
   };
+  
 
   try {
     const response = await fetch(url, config);
