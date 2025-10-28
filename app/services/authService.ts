@@ -66,11 +66,17 @@ class AuthService {
   }
 
   async login(data: LoginRequest): Promise<LoginResponse> {
-    return this.request<LoginResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  const result = await this.request<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+  if (result.access_token) {
+    localStorage.setItem('token', result.access_token);
   }
+
+  return result;
+}
 
   async getCurrentUser(accessToken: string): Promise<UserInfoResponse> {
     return this.request<UserInfoResponse>('/auth/me', {
