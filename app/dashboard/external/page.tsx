@@ -81,9 +81,9 @@ export default function ExternalDashboard() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Redirigir si no es usuario externo o administrador
+  // Redirigir si no es usuario externo
   useEffect(() => {
-    if (user && user.role !== UserRole.EXTERNAL && user.role !== UserRole.ADMIN) {
+    if (user && user.role !== UserRole.EXTERNAL) {
       router.push('/dashboard');
     }
   }, [user, router]);

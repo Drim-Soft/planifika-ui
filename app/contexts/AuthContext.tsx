@@ -8,14 +8,6 @@ import { getDefaultRouteForRole } from '../utils/roleUtils';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Función auxiliar para convertir email a nombre
-function formatEmailToName(email: string): string {
-  const username = email.split('@')[0];
-  return username.split('.').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-}
-
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -214,45 +206,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setUser(userData);
 
-      // Redireccionar según el rol y estado de organización
-      let redirectRoute: string;
-      
-      console.log('=== DEBUG REDIRECCIÓN ===');
-      console.log('userData completo:', JSON.stringify(userData, null, 2));
-      console.log('userData.role:', userData.role);
-      console.log('UserRole.ADMIN:', UserRole.ADMIN);
-      console.log('¿Es admin?', userData.role === UserRole.ADMIN);
-      console.log('userData.organizationId:', userData.organizationId);
-      console.log('Tipo de organizationId:', typeof userData.organizationId);
-      console.log('¿organizationId es null?', userData.organizationId === null);
-      console.log('¿organizationId es undefined?', userData.organizationId === undefined);
-      console.log('¿organizationId es falsy?', !userData.organizationId);
-      
-      // Si es administrador (role: 1)
-      if (userData.role === UserRole.ADMIN) {
-        // Verificar si tiene organizationId (debe ser un número válido mayor a 0)
-        const hasOrganization = userData.organizationId && userData.organizationId > 0;
-        console.log('¿Tiene organización válida?', hasOrganization);
-        
-        if (!hasOrganization) {
-          // Si no tiene organización, mandarlo a crear una
-          redirectRoute = '/create-organization';
-          console.log('✅ Administrador sin organización válida, redirigiendo a crear organización');
-        } else {
-          // Si tiene organización, mandarlo al dashboard externo
-          redirectRoute = '/dashboard/external';
-          console.log('✅ Administrador con organización (ID:', userData.organizationId, '), redirigiendo a dashboard externo');
-        }
-      } else {
-        // Para otros roles, usar la ruta por defecto
-        redirectRoute = getDefaultRouteForRole(userData.role);
-        console.log('✅ Usando ruta por defecto para rol:', userData.role, '→', redirectRoute);
-      }
-      
-      console.log('🚀 Redirigiendo a:', redirectRoute);
-      console.log('========================');
-      
-      router.push(redirectRoute);
+      // Redireccionar según el rol
+      const defaultRoute = getDefaultRouteForRole(userData.role);
+      router.push(defaultRoute);
 
       return response;
     } catch (error) {
