@@ -16,6 +16,8 @@ type SidebarProfileProps = {
 
 export default function SidebarProfile({ hideEdit = false, roleLabel = "Usuario Externo", dashboardHref = "/dashboard/external" }: SidebarProfileProps) {
   const { user, logout } = useAuth();
+  // Sanitizar URL de foto para evitar espacios iniciales que rompen Next Image
+  const sanitizedPhotoUrl = (user?.photoUrl || '').trim();
   const [collapsed, setCollapsed] = useState(false);
   const [showCreateTicketModal, setShowCreateTicketModal] = useState(false);
   const [showTicketModal, setShowTicketModal] = useState(false);
@@ -96,16 +98,16 @@ export default function SidebarProfile({ hideEdit = false, roleLabel = "Usuario 
                       height={collapsed ? 40 : 64}
                       className="object-contain p-1"
                     />
-                  ) : user?.photoUrl ? (
-                    user.photoUrl.startsWith('http') ? (
+                  ) : sanitizedPhotoUrl ? (
+                    sanitizedPhotoUrl.startsWith('http') ? (
                       <img
-                        src={user.photoUrl}
+                        src={sanitizedPhotoUrl}
                         alt="Foto de perfil"
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <Image
-                        src={user.photoUrl}
+                        src={sanitizedPhotoUrl}
                         alt="Foto de perfil"
                         width={64}
                         height={64}
@@ -130,18 +132,18 @@ export default function SidebarProfile({ hideEdit = false, roleLabel = "Usuario 
                     height={collapsed ? 40 : 64}
                     className="object-contain p-1"
                   />
-                ) : user?.photoUrl ? (
-                  user.photoUrl.startsWith('http') ? (
+                ) : sanitizedPhotoUrl ? (
+                  sanitizedPhotoUrl.startsWith('http') ? (
                     // Remoto: usar <img>
                     <img
-                      src={user.photoUrl}
+                      src={sanitizedPhotoUrl}
                       alt="Foto de perfil"
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     // Local: usar <Image> de Next
                     <Image
-                      src={user.photoUrl}
+                      src={sanitizedPhotoUrl}
                       alt="Foto de perfil"
                       width={64}
                       height={64}
