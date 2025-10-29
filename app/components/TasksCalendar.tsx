@@ -1,4 +1,3 @@
-// components/tasks/TasksCalendar.tsx
 "use client";
 
 import { useState } from 'react';
@@ -55,13 +54,13 @@ export default function TasksCalendar({ tasks, taskStatuses, taskPriorities, onT
         const priority = taskPriorities.find(p => p.idTaskPriority === priorityId);
         switch (priority?.name?.toLowerCase()) {
             case 'alta':
-                return 'bg-red-100 border-red-300 text-red-800';
+                return 'bg-red-500 text-white'; // ✅ ROJO como en la leyenda
             case 'media':
-                return 'bg-yellow-100 border-yellow-300 text-yellow-800';
+                return 'bg-yellow-500 text-white'; // ✅ AMARILLO como en la leyenda
             case 'baja':
-                return 'bg-green-100 border-green-300 text-green-800';
+                return 'bg-green-500 text-white'; // ✅ VERDE como en la leyenda
             default:
-                return 'bg-gray-100 border-gray-300 text-gray-800';
+                return 'bg-gray-500 text-white';
         }
     };
 
@@ -190,24 +189,6 @@ export default function TasksCalendar({ tasks, taskStatuses, taskPriorities, onT
                             </div>
                         );
                     })}
-                </div>
-            </div>
-
-            {/* Legend */}
-            <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-                <div className="flex flex-wrap gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-red-500 rounded"></div>
-                        <span className="text-gray-600">Alta prioridad</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-                        <span className="text-gray-600">Media prioridad</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-green-500 rounded"></div>
-                        <span className="text-gray-600">Baja prioridad</span>
-                    </div>
                 </div>
             </div>
         </div>
