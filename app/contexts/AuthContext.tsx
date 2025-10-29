@@ -333,8 +333,82 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('=== LOGIN EXTERNO COMPLETADO ===');
       console.log('Redirección ejecutada exitosamente');
       console.log('================================');
+        // Usar el usuario y token retornados por el backend
+        // El backend debe retornar: { user: { ... }, access_token: '...' }
+        const backendUser = response.user as any;
+        // Resolver ID de Planifika con múltiples variantes
+        let resolvedId: number =
+          backendUser?.idPlanifikaUser ||
+          backendUser?.idUser ||
+          backendUser?.iduser ||
+          (typeof backendUser?.id === 'number' ? backendUser.id : 0) ||
+          0;
 
-      return response;
+        // Resolver supabaseUserId (UUID)
+        const resolvedSupabaseUserId: string =
+          backendUser?.supabaseUserId ||
+          backendUser?.supabaseuserid ||
+          (typeof backendUser?.id === 'string' ? backendUser.id : '') ||
+          '';
+
+        console.log('[externalLogin] backendUser recibido:', backendUser);
+        console.log('[externalLogin] resolvedId inicial:', resolvedId, 'resolvedSupabaseUserId:', resolvedSupabaseUserId);
+
+        // Si el ID de Planifika vino en 0, intentar recuperarlo por Supabase ID
+        if ((!resolvedId || resolvedId === 0) && resolvedSupabaseUserId) {
+          try {
+            console.log('Intentando obtener id de Planifika por supabaseUserId:', resolvedSupabaseUserId);
+            const fullUserInfo = await authService.getUserBySupabaseId(resolvedSupabaseUserId, response.access_token);
+            resolvedId = fullUserInfo?.iduser || fullUserInfo?.idUser || fullUserInfo?.id || resolvedId || 0;
+            console.log('[externalLogin] Resuelto id por Supabase ID:', resolvedId, 'fullUserInfo:', fullUserInfo);
+          } catch (e) {
+            console.warn('No se pudo resolver el id de Planifika por Supabase ID:', e);
+          }
+        }
+
+        // Si aún no tenemos ID, intentar por email
+        if ((!resolvedId || resolvedId === 0) && (backendUser?.email || data.email)) {
+          try {
+            const emailToQuery = backendUser?.email || data.email;
+            console.log('Intentando obtener id de Planifika por email:', emailToQuery);
+            const emailUserInfo = await authService.getUserByEmail(emailToQuery, response.access_token);
+            resolvedId = emailUserInfo?.iduser || emailUserInfo?.idUser || emailUserInfo?.id || resolvedId || 0;
+            console.log('[externalLogin] Resuelto id por email:', resolvedId, 'emailUserInfo:', emailUserInfo);
+          } catch (e) {
+            console.warn('No se pudo resolver el id de Planifika por email:', e);
+          }
+        }
+
+        const userData: User = {
+          id: resolvedId || 0,
+          name: backendUser?.name || formatEmailToName(data.email),
+          email: backendUser?.email || data.email,
+          photoUrl: backendUser?.photoUrl || '',
+          role: finalRole,
+          status: backendUser?.iduserstatus || backendUser?.idUserStatus || 1,
+          organizationId: backendUser?.idorganization || backendUser?.idOrganization || undefined,
+          supabaseUserId: resolvedSupabaseUserId || '0',
+        };
+
+        if (!userData.id || userData.id === 0) {
+          console.warn('[externalLogin] ⚠️ El ID final del usuario sigue siendo 0. Revisa backend mapping de user.id/idUser.');
+        } else {
+          console.log('[externalLogin] ✅ ID final de usuario resuelto:', userData.id);
+        }
+
+        console.log('Final external user data:', userData);
+        console.log('Final role value:', userData.role);
+
+        // Guardar en localStorage
+        localStorage.setItem('planifika_user', JSON.stringify(userData));
+        localStorage.setItem('planifika_token', response.access_token);
+
+        setUser(userData);
+
+        // Redireccionar al dashboard académico
+        router.push('/dashboard/academic');
+
+        return response;
     } catch (error) {
       const authError: AuthError = {
         message: error instanceof Error ? error.message : 'Error desconocido durante el login externo',
@@ -391,6 +465,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
   };
 
+  // Permite actualizar parcialmente el usuario en memoria/localStorage
+  const updateUser = (partial: Partial<User>) => {
+    setUser((prev: User | null) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...partial } as User;
+      try {
+        localStorage.setItem('planifika_user', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -400,6 +486,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     externalLogin,
     logout,
     error,
+    updateUser,
   };
 
   return (

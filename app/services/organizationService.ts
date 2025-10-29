@@ -2,7 +2,7 @@
 import { API_CONFIG_ORGANIZATIONS, DEFAULT_API_HEADERS } from '../config/api';
 
 export interface Organization {
-  IDOrganization?: number;
+  id?: number;
   nit: string;
   name: string;
   address?: string;

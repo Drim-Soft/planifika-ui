@@ -6,6 +6,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { getFriendlyErrorMessage } from "../../utils/errorMessages";
 
+export const dynamic = 'force-dynamic';
+
 export default function StudentLogin() {
   const { externalLogin, isLoading, error } = useAuth();
   const [formData, setFormData] = useState({

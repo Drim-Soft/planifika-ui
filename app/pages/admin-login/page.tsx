@@ -8,6 +8,8 @@ import { getRoleLabel } from "../../utils/roleUtils";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { getFriendlyErrorMessage } from "../../utils/errorMessages";
 
+export const dynamic = 'force-dynamic';
+
 export default function AdminLogin() {
   const { login, isLoading, error, logout, user, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
@@ -201,7 +203,7 @@ export default function AdminLogin() {
               <p className="text-sm text-gray-600">
                 ¿No tienes cuenta?{" "}
                 <Link 
-                  href={EXTERNAL_URLS.MAIN_SYSTEM!} 
+                  href={EXTERNAL_URLS.MAIN_SYSTEM ?? '/'} 
                   className="text-yellow-600 hover:text-yellow-700 font-medium"
                 >
                   Regístrate como administrador

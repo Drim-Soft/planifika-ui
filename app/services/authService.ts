@@ -1,6 +1,6 @@
 // Servicio para manejar autenticación con el backend
 import { API_CONFIG_USERS_PLANIFIKA, DEFAULT_API_HEADERS } from '../config/api';
-import { SignupRequest, SignupResponse, LoginRequest, LoginResponse, UserInfoResponse, AuthError } from '../types/auth';
+import { SignupRequest, SignupResponse, LoginRequest, LoginResponse, UserInfoResponse, AuthError, UpdateProfileRequest, UpdateProfileResponse } from '../types/auth';
 
 class AuthService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -66,11 +66,17 @@ class AuthService {
   }
 
   async login(data: LoginRequest): Promise<LoginResponse> {
-    return this.request<LoginResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  const result = await this.request<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+  if (result.access_token) {
+    localStorage.setItem('token', result.access_token);
   }
+
+  return result;
+}
 
   async getCurrentUser(accessToken: string): Promise<UserInfoResponse> {
     return this.request<UserInfoResponse>('/auth/me', {
@@ -79,6 +85,18 @@ class AuthService {
         'Authorization': `Bearer ${accessToken}`,
         'ngrok-skip-browser-warning': 'true',
       },
+    });
+  }
+
+  // Actualizar perfil del usuario autenticado
+  async updateProfile(accessToken: string, data: UpdateProfileRequest): Promise<UpdateProfileResponse> {
+    return this.request<UpdateProfileResponse>('/auth/me', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
     });
   }
 

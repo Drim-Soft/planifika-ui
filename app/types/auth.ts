@@ -40,6 +40,21 @@ export interface LoginResponse {
   user: {
     id: string;
     email: string;
+    // Campos adicionales para login externo (estudiante)
+    idUser?: number; // id en BD Planifika
+    iduser?: number; // posibles variantes
+    idPlanifikaUser?: number;
+    name?: string;
+    photoUrl?: string;
+    iduserstatus?: number; // snake/camel del backend
+    idUserStatus?: number;
+    idorganization?: number;
+    idOrganization?: number;
+    idusertype?: number;
+    idUserType?: number;
+    supabaseUserId?: string; // UUID
+    supabaseuserid?: string; // posible variante
+    // Otros posibles campos
   };
 }
 
@@ -54,6 +69,22 @@ export interface UserInfoResponse {
   iduserstatus: number;
   idorganization?: number;
   userType?: number; // Agregar userType como campo opcional
+}
+
+// Actualización de perfil (/auth/me PATCH)
+export interface UpdateProfileRequest {
+  name?: string;
+  password?: string;
+  photourl?: string; // Para PATCH /auth/me
+}
+
+export interface UpdateProfileResponse {
+  auth?: Record<string, unknown>;
+  db?: {
+    iduser?: number;
+    name?: string;
+  } | { skipped: boolean };
+  supabaseUserId?: string;
 }
 
 export interface User {
@@ -92,4 +123,5 @@ export interface AuthContextType {
   externalLogin: (data: LoginRequest) => Promise<LoginResponse>;
   logout: () => void;
   error: AuthError | null;
+  updateUser?: (partial: Partial<User>) => void;
 }
