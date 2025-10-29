@@ -40,6 +40,21 @@ export interface LoginResponse {
   user: {
     id: string;
     email: string;
+    // Campos adicionales para login externo (estudiante)
+    idUser?: number; // id en BD Planifika
+    iduser?: number; // posibles variantes
+    idPlanifikaUser?: number;
+    name?: string;
+    photoUrl?: string;
+    iduserstatus?: number; // snake/camel del backend
+    idUserStatus?: number;
+    idorganization?: number;
+    idOrganization?: number;
+    idusertype?: number;
+    idUserType?: number;
+    supabaseUserId?: string; // UUID
+    supabaseuserid?: string; // posible variante
+    // Otros posibles campos
   };
 }
 
