@@ -5,6 +5,16 @@ import { CreateTicketRequest, TicketResponse, UpdateTicketRequest } from '../typ
 const API_BASE_URL = API_CONFIG_USERS_PLANIFIKA.BASE_URL;
 
 class TicketService {
+  private getCurrentUserId(): number | null {
+    try {
+      const raw = localStorage.getItem('planifika_user');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return typeof parsed?.id === 'number' ? parsed.id : null;
+    } catch {
+      return null;
+    }
+  }
   /**
    * Crear un nuevo ticket de soporte
    */
@@ -17,6 +27,7 @@ class TicketService {
         headers: {
           ...DEFAULT_API_HEADERS,
           'Authorization': `Bearer ${token}`,
+          ...(this.getCurrentUserId() ? { 'X-Planifika-User': String(this.getCurrentUserId()) } : {}),
         },
         body: JSON.stringify(data),
       });
@@ -45,6 +56,7 @@ class TicketService {
         headers: {
           ...DEFAULT_API_HEADERS,
           'Authorization': `Bearer ${token}`,
+          ...(this.getCurrentUserId() ? { 'X-Planifika-User': String(this.getCurrentUserId()) } : {}),
         },
       });
 
@@ -71,6 +83,7 @@ class TicketService {
         headers: {
           ...DEFAULT_API_HEADERS,
           'Authorization': `Bearer ${token}`,
+          ...(this.getCurrentUserId() ? { 'X-Planifika-User': String(this.getCurrentUserId()) } : {}),
         },
       });
 
@@ -97,6 +110,7 @@ class TicketService {
         headers: {
           ...DEFAULT_API_HEADERS,
           'Authorization': `Bearer ${token}`,
+          ...(this.getCurrentUserId() ? { 'X-Planifika-User': String(this.getCurrentUserId()) } : {}),
         },
       });
 
@@ -123,6 +137,7 @@ class TicketService {
         headers: {
           ...DEFAULT_API_HEADERS,
           'Authorization': `Bearer ${token}`,
+          ...(this.getCurrentUserId() ? { 'X-Planifika-User': String(this.getCurrentUserId()) } : {}),
         },
       });
 
@@ -149,6 +164,7 @@ class TicketService {
         headers: {
           ...DEFAULT_API_HEADERS,
           'Authorization': `Bearer ${token}`,
+          ...(this.getCurrentUserId() ? { 'X-Planifika-User': String(this.getCurrentUserId()) } : {}),
         },
         body: JSON.stringify(data),
       });
@@ -177,6 +193,7 @@ class TicketService {
         headers: {
           ...DEFAULT_API_HEADERS,
           'Authorization': `Bearer ${token}`,
+          ...(this.getCurrentUserId() ? { 'X-Planifika-User': String(this.getCurrentUserId()) } : {}),
         },
       });
 
