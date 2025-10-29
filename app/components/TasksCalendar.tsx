@@ -26,9 +26,9 @@ export default function TasksCalendar({ tasks, taskStatuses, taskPriorities, onT
 
     const getTasksForDay = (day: number, month: number, year: number) => {
         return tasks.filter(task => {
-            if (!task.startDate) return false;
+            if (!task.endDate) return false;
 
-            const taskDate = new Date(task.startDate);
+            const taskDate = new Date(task.endDate);
             return taskDate.getDate() === day &&
                 taskDate.getMonth() === month &&
                 taskDate.getFullYear() === year;
