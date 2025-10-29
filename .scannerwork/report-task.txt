@@ -1,0 +1,6 @@
+projectKey=Front
+serverUrl=http://localhost:9000
+serverVersion=25.10.0.114319
+dashboardUrl=http://localhost:9000/dashboard?id=Front
+ceTaskId=9a0d9520-875d-4002-9b83-704db822d063
+ceTaskUrl=http://localhost:9000/api/ce/task?id=9a0d9520-875d-4002-9b83-704db822d063
