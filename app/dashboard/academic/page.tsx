@@ -10,63 +10,53 @@ import { UserRole } from "../../types/auth";
 import { getRoleLabel } from "../../utils/roleUtils";
 import { projectService } from "../../services/projectService";
 import { Project } from "../../types/project";
+import ProjectDetailsModal from "../../components/ProjectDetailsModal";
+import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
+import ProjectEditModal from "./components/ProjectEditModal";
 
-// Mock data para proyectos académicos
-const mockProjects = [
-  {
-    id: 1,
-    title: "Sistema de Gestión Académica",
-    description: "Desarrollo de una aplicación web para la gestión de estudiantes y materias",
-    status: "En Progreso",
-    progress: 65,
-    dueDate: "2024-03-15",
-    subject: "Ingeniería de Software",
-    professor: "Dr. María González",
-    team: ["Ana García", "Carlos López", "Laura Martínez"],
-    tags: ["React", "Node.js", "MongoDB"]
-  },
-  {
-    id: 2,
-    title: "Análisis de Datos con Python",
-    description: "Proyecto de análisis estadístico de datos de ventas usando pandas y matplotlib",
-    status: "Completado",
-    progress: 100,
-    dueDate: "2024-02-28",
-    subject: "Análisis de Datos",
-    professor: "Dr. Juan Pérez",
-    team: ["Pedro Rodríguez"],
-    tags: ["Python", "Pandas", "Matplotlib"]
-  },
-  {
-    id: 3,
-    title: "Aplicación Móvil de Tareas",
-    description: "Desarrollo de una app móvil para gestión de tareas académicas",
-    status: "Pendiente",
-    progress: 20,
-    dueDate: "2024-04-20",
-    subject: "Desarrollo Móvil",
-    professor: "Dra. Carmen Silva",
-    team: ["Miguel Torres", "Sofia Herrera"],
-    tags: ["React Native", "Firebase"]
-  },
-  {
-    id: 4,
-    title: "Investigación en IA",
-    description: "Estudio sobre algoritmos de machine learning para reconocimiento de patrones",
-    status: "En Progreso",
-    progress: 40,
-    dueDate: "2024-05-10",
-    subject: "Inteligencia Artificial",
-    professor: "Dr. Roberto Díaz",
-    team: ["Elena Vargas", "Diego Morales"],
-    tags: ["Python", "TensorFlow", "Scikit-learn"]
+// ==========================
+// Helpers globales de rol
+// ==========================
+const normalizeStr = (val: unknown) =>
+  String(val ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+const hasAdminProjectRole = (role: unknown, realRoleId?: number) => {
+  try {
+    // Caso 1: si tenemos el rol real obtenido de BD
+    if (typeof realRoleId === "number") {
+      const adminIds = [21, 22, 23, 24];
+      return adminIds.includes(realRoleId);
+    }
+
+    // Caso 2: si es un número (viene del backend)
+    if (typeof role === "number") {
+      const adminIds = [21, 22, 23, 24];
+      return adminIds.includes(role);
+    }
+
+    // Caso 3: si es texto u objeto
+    const raw =
+      typeof role === "string"
+        ? role
+        : (role as any)?.name ?? (role as any)?.rolename ?? "";
+    const normalized = raw.trim().toLowerCase();
+    return normalized.includes("administrador proyecto");
+  } catch {
+    return false;
   }
-];
+};
+
+
+const getStatusName = (p: any) => (p?.projectStatus?.name as string) || "";
+
 
 export default function AcademicDashboard() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
-  const [projects, setProjects] = useState(mockProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [stats, setStats] = useState({
@@ -75,6 +65,9 @@ export default function AcademicDashboard() {
     completedProjects: 0,
     pendingTasks: 0
   });
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [editProject, setEditProject] = useState<any>(null);
+  const [deleteProject, setDeleteProject] = useState<any>(null);
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -92,14 +85,61 @@ export default function AcademicDashboard() {
 
   // Cargar proyectos del usuario
   useEffect(() => {
+
     const loadUserProjects = async () => {
       if (!user) return;
       
       try {
         setIsLoadingProjects(true);
-        const projects = await projectService.getUserProjects(user.id);
-        setUserProjects(projects);
-      } catch (err) {
+
+const projects = await projectService.getUserProjects(user.id);
+console.log("Proyectos devueltos por API:", projects);
+
+const normalized = projects.map((p: any) => ({
+  ...p,
+  IDProject: p.IDProject ?? p.idproject,
+  IDMethodologyRef: p.IDMethodologyRef ?? p.idmethodologyRef,
+  IDProjectStatusRef: p.IDProjectStatusRef ?? p.idprojectStatusRef,
+  methodology: p.methodology
+    ? {
+        ...p.methodology,
+        IDMethodology: p.methodology.IDMethodology ?? p.methodology.idmethodology,
+      }
+    : null,
+  projectStatus: p.projectStatus
+    ? {
+        ...p.projectStatus,
+        IDProjectStatus:
+          p.projectStatus.IDProjectStatus ?? p.projectStatus.idprojectStatus,
+      }
+    : null,
+}));
+
+const filteredProjects = normalized.filter(
+  (p) => p.projectStatus?.name?.toLowerCase() !== "eliminado"
+);
+
+const uniqueProjects = filteredProjects.filter(
+  (project, index, self) =>
+    index === self.findIndex((p) => p.IDProject === project.IDProject)
+);
+
+// 🔐 rol por proyecto
+const projectsWithRoles = await Promise.all(
+  uniqueProjects.map(async (proj) => {
+    try {
+      const usersInProject = await projectService.getUsersInProject(proj.IDProject);
+      const myUser = usersInProject.find((u: any) => u.iduser === user.id);
+      return { ...proj, userRoleId: myUser?.idrole ?? null };
+    } catch (err) {
+      console.warn(`No se pudo cargar roles para proyecto ${proj.IDProject}`, err);
+      return { ...proj, userRoleId: null };
+    }
+  })
+);
+
+setUserProjects(projectsWithRoles);
+      }catch (err) {
         console.error('Error loading user projects:', err);
       } finally {
         setIsLoadingProjects(false);
@@ -113,18 +153,31 @@ export default function AcademicDashboard() {
 
   // Calcular estadísticas
   useEffect(() => {
-    const total = projects.length;
-    const active = projects.filter(p => p.status === "En Progreso").length;
-    const completed = projects.filter(p => p.status === "Completado").length;
-    const pending = projects.filter(p => p.status === "Pendiente").length;
+    if (!userProjects || userProjects.length === 0) return;
+
+    const total = userProjects.length;
+    const active = userProjects.filter(
+      (p) =>
+        p.projectStatus?.name?.trim().toLowerCase() === "en progreso"
+    ).length;
+    const completed = userProjects.filter(
+      (p) =>
+        p.projectStatus?.name?.trim().toLowerCase() === "completado"
+    ).length;
+    const pending = userProjects.filter(
+      (p) =>
+        p.projectStatus?.name?.trim().toLowerCase() === "pendiente"
+    ).length;
 
     setStats({
       totalProjects: total,
       activeProjects: active,
       completedProjects: completed,
-      pendingTasks: pending
+      pendingTasks: pending,
     });
-  }, [projects]);
+  }, [userProjects]);
+
+
 
   // Navegar a crear nuevo proyecto
   const handleCreateNewProject = () => {
@@ -349,146 +402,138 @@ export default function AcademicDashboard() {
                   )}
 
                   {/* Acciones */}
-                  <div className="flex space-x-2">
-                    <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200">
-                      Ver Detalles
-                    </button>
-                    <button className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200">
-                      Editar
-                    </button>
-                  </div>
+<div className="flex space-x-2">
+  {/* Ver Detalles */}
+  <button
+    onClick={() => setSelectedProject(project)}
+    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+  >
+    Ver Detalles
+  </button>
+
+  {/* Solo si es admin se muestran los botones de editar/eliminar */}
+  {hasAdminProjectRole(user?.role, project?.userRoleId) && (
+    <>
+      <button
+        onClick={() => {
+          console.log("✏️ Editar proyecto", project.IDProject);
+          setEditProject(project);
+        }}
+        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+      >
+        Editar
+      </button>
+
+      <button
+        onClick={() => {
+          console.log("🗑️ Eliminar proyecto", project.IDProject);
+          setDeleteProject(project);
+        }}
+        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200"
+      >
+        Eliminar
+      </button>
+    </>
+  )}
+</div>
+
                 </div>
               </div>
             ))}
 
-            {/* Proyectos mock (ejemplos) */}
-            {projects.map((project) => (
-              <div key={project.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
-                <div className="p-6">
-                  {/* Header de la tarjeta */}
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                        {project.title}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {project.subject} - {project.professor}
-                      </p>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                      {project.status}
-                    </span>
-                  </div>
 
-                  {/* Descripción */}
-                  <p className="text-gray-700 text-sm mb-4 line-clamp-2">
-                    {project.description}
-                  </p>
 
-                  {/* Progreso */}
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium text-gray-700">Progreso</span>
-                      <span className="text-sm text-gray-600">{project.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${getProgressColor(project.progress)}`}
-                        style={{ width: `${project.progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
 
-                  {/* Fecha de entrega */}
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Entrega:</span> {new Date(project.dueDate).toLocaleDateString('es-ES')}
-                    </p>
-                  </div>
-
-                  {/* Equipo */}
-                  <div className="mb-4">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Equipo:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {project.team.map((member, index) => (
-                        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                          {member}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="mb-4">
-                    <div className="flex flex-wrap gap-1">
-                      {project.tags.map((tag, index) => (
-                        <span key={index} className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Acciones */}
-                  <div className="flex space-x-2">
-                    <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200">
-                      Ver Detalles
-                    </button>
-                    <button className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200">
-                      Editar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
         {/* Actividad Reciente */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-full">
-                  <div className="text-sm">✅</div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    Completaste el proyecto "Análisis de Datos con Python"
-                  </p>
-                  <p className="text-xs text-gray-500">Hace 2 días</p>
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
+              </div>
+              <div className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-green-100 rounded-full">
+                      <div className="text-sm">✅</div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        Completaste el proyecto "Análisis de Datos con Python"
+                      </p>
+                      <p className="text-xs text-gray-500">Hace 2 días</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <div className="text-sm">📝</div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        Actualizaste el progreso de "Sistema de Gestión Académica"
+                      </p>
+                      <p className="text-xs text-gray-500">Hace 5 días</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <div className="text-sm">➕</div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        Creaste el proyecto "Aplicación Móvil de Tareas"
+                      </p>
+                      <p className="text-xs text-gray-500">Hace 1 semana</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <div className="text-sm">📝</div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    Actualizaste el progreso de "Sistema de Gestión Académica"
-                  </p>
-                  <p className="text-xs text-gray-500">Hace 5 días</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <div className="text-sm">➕</div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    Creaste el proyecto "Aplicación Móvil de Tareas"
-                  </p>
-                  <p className="text-xs text-gray-500">Hace 1 semana</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            </div> {/* ← este cierra totalmente la sección de actividad reciente */}
+
+
+            {/* =========================
+                  Modales de Proyecto
+              ========================= */}
+            {selectedProject && (
+              <ProjectDetailsModal
+                project={selectedProject}
+                onClose={() => setSelectedProject(null)}
+              />
+            )}
+
+            {editProject && (
+              <ProjectEditModal
+                project={editProject}
+                onClose={() => setEditProject(null)}
+                onSave={() => {
+                  projectService.getUserProjects(user.id).then(setUserProjects);
+                }}
+              />
+            )}
+
+            {deleteProject && (
+              <ConfirmDeleteModal
+                project={deleteProject}
+                onClose={() => setDeleteProject(null)}
+                onConfirm={() => {
+                  projectService
+                    .deleteProject(deleteProject.IDProject ?? deleteProject.idproject)
+                    .then(() => {
+                      setUserProjects(prev =>
+                        prev.filter(p => p.IDProject !== deleteProject.IDProject)
+                      );
+                      setDeleteProject(null);
+                    })
+                    .catch(console.error);
+                }}
+              />
+            )}
+
+
+
       </main>
       </div>
     </div>

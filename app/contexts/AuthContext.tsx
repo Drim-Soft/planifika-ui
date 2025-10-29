@@ -232,29 +232,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await authService.externalLogin(data);
       console.log('External login response:', response);
       
-      // Para login externo, no intentar obtener info del usuario con /auth/me
-      // porque el token de Supabase SIU no es compatible con ese endpoint
-      // En su lugar, usar la información básica del email
+      console.log('=== VERIFICANDO RESPUESTA DE LOGIN ===');
+      console.log('¿Tiene user?', response.user ? 'SÍ' : 'NO');
+      console.log('¿Tiene access_token?', response.access_token ? 'SÍ' : 'NO');
+      console.log('Response.user completo:', response.user);
+      console.log('=====================================');
       
-      // Para login externo (estudiantes), forzar userType 3 (COLLABORATOR)
-      const finalRole = UserRole.COLLABORATOR; // Siempre 3 para estudiantes
-      console.log('Forzando role COLLABORATOR (3) para login externo de estudiante');
+      // El backend ya devuelve los datos del usuario directamente en response.user
+      // No necesitamos hacer una consulta adicional
+      let userInfo: any = response.user;
       
-      // Función para convertir email prefix a nombre legible
-      const formatEmailToName = (email: string): string => {
-        const prefix = email.split('@')[0];
-        if (!prefix) return 'Usuario Externo';
-        
-        // Convertir guiones bajos y puntos a espacios
-        const formatted = prefix
-          .replace(/[._]/g, ' ')
-          .split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ');
-        
-        return formatted || 'Usuario Externo';
-      };
+      console.log('=== DATOS DEL USUARIO OBTENIDOS ===');
+      console.log('userInfo:', userInfo);
+      console.log('idUser:', userInfo?.idUser);
+      console.log('name:', userInfo?.name);
+      console.log('email:', userInfo?.email);
+      console.log('photoUrl:', userInfo?.photoUrl);
+      console.log('idUserType:', userInfo?.idUserType);
+      console.log('idUserStatus:', userInfo?.idUserStatus);
+      console.log('idOrganization:', userInfo?.idOrganization);
+      console.log('===================================');
       
+      // Verificar que tenemos los datos necesarios
+      if (!userInfo || !userInfo.idUser) {
+        console.error('=== ERROR: DATOS DE USUARIO INCOMPLETOS ===');
+        console.error('userInfo:', userInfo);
+        console.error('===========================================');
+        throw new Error('No se obtuvieron los datos completos del usuario');
+      }
+      
+      // Determinar el role correcto
+      const userRoleValue = userInfo.idUserType;
+      console.log('Raw userRoleValue from backend:', userRoleValue);
+      
+      let finalRole: UserRole;
+      if (userRoleValue !== undefined && userRoleValue !== null) {
+        finalRole = userRoleValue as UserRole;
+      } else {
+        // Fallback para estudiantes externos
+        finalRole = UserRole.COLLABORATOR;
+      }
+      
+
         // Usar el usuario y token retornados por el backend
         // El backend debe retornar: { user: { ... }, access_token: '...' }
         const backendUser = response.user as any;

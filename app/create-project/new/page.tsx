@@ -124,53 +124,94 @@ export default function CreateNewProject() {
   };
 
   // Crear proyecto
-  const handleCreateProject = async () => {
-    if (!validateForm() || !user) {
-      return;
-    }
+  // Crear proyecto
+const handleCreateProject = async () => {
+  if (!validateForm() || !user) return;
 
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
+  setIsLoading(true);
+  setError(null);
+  setSuccess(null);
 
-    try {
-      const projectData = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        budget: formData.budget ? Number(formData.budget) : undefined,
-        IDMethodologyRef: Number(formData.methodology),
-        IDProjectStatusRef: Number(formData.status)
-      };
+  try {
+    console.log(" formData recibido:", formData);
 
-      const newProject = await projectService.createProject(projectData, user.id);
-      
-      setSuccess(`¡Proyecto "${newProject.name}" creado exitosamente!`);
-      
-      // Limpiar formulario
-      setFormData({
-        name: '',
-        description: '',
-        startDate: '',
-        endDate: '',
-        budget: '',
-        methodology: '',
-        status: ''
-      });
-      
-      // Redirigir a la página de proyectos después de 2 segundos
-      setTimeout(() => {
-        router.push('/create-project');
-      }, 2000);
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear el proyecto');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    //  Log para ver qué trae la lista de metodologías
+    console.log(" methodologies[0]:", methodologies[0]);
+    console.log(" statuses[0]:", projectStatuses[0]);
 
+    // Buscar la metodología seleccionada
+    const selectedMethodology = methodologies.find((m: any) => {
+      const id =
+        m.IDMethodology ??
+        m.idMethodology ??
+        m.idmethodology ??
+        m.id ??
+        m.IdMethodology ??
+        m.Id;
+      return id == Number(formData.methodology);
+    });
+
+    // Buscar el estado seleccionado
+    const selectedStatus = projectStatuses.find((s: any) => {
+      const id =
+        s.IDProjectStatus ??
+        s.idProjectStatus ??
+        s.idprojectstatus ??
+        s.id ??
+        s.IdProjectStatus ??
+        s.Id;
+      return id == Number(formData.status);
+    });
+
+    console.log(" selectedMethodology encontrado:", selectedMethodology);
+    console.log(" selectedStatus encontrado:", selectedStatus);
+
+    // Construir el payload
+    const projectData = {
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      budget: formData.budget ? Number(formData.budget) : undefined,
+      methodologyName: formData.methodology, 
+      statusName: projectStatuses.find(s => s.IDProjectStatus == Number(formData.status))?.name
+    };
+
+    console.log("Payload final que se envía:", projectData);
+
+    console.log("🚨 VERIFICACIÓN FRONTEND:");
+    console.log("formData.methodology:", formData.methodology);
+    console.log("methodologies:", methodologies);
+    console.log("projectData:", projectData);
+    console.log("JSON final enviado:", JSON.stringify({
+      ...projectData,
+      IDUser: user.id
+    }, null, 2));
+
+
+
+
+    const newProject = await projectService.createProject(projectData, user.id);
+
+    setSuccess(`¡Proyecto "${newProject.name}" creado exitosamente!`);
+    setFormData({
+      name: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      budget: "",
+      methodology: "",
+      status: "",
+    });
+
+    setTimeout(() => router.push("/create-project"), 2000);
+  } catch (err) {
+    console.error("Error al crear el proyecto:", err);
+    setError(err instanceof Error ? err.message : "Error al crear el proyecto");
+  } finally {
+    setIsLoading(false);
+  }
+};
   // Mostrar loading mientras se verifica la autenticación o se cargan los datos
   if (authLoading || isLoadingData) {
     return (
@@ -364,21 +405,63 @@ export default function CreateNewProject() {
                 <label htmlFor="methodology" className="block text-sm font-medium text-gray-700 mb-2">
                   Metodología *
                 </label>
-                <select
-                  id="methodology"
-                  value={formData.methodology}
-                  onChange={(e) => handleInputChange('methodology', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-black ${
-                    formErrors.methodology ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Selecciona una metodología</option>
-                  {methodologies.map((methodology) => (
-                    <option key={methodology.IDMethodology} value={methodology.IDMethodology}>
-                      {methodology.name}
-                    </option>
-                  ))}
-                </select>
+                
+                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              {/* Metodología */}
+<div>
+  <label htmlFor="methodology" className="block text-sm font-medium text-gray-700 mb-2">
+    Metodología *
+  </label>
+
+
+
+  <select
+  id="methodology"
+  value={formData.methodology}
+  onChange={(e) => handleInputChange("methodology", e.target.value)}
+  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 text-black ${
+    formErrors.methodology ? "border-red-500" : "border-gray-300"
+  }`}
+>
+  <option value="">Selecciona una metodología</option>
+  {methodologies.map((methodology: any) => (
+    <option key={methodology.IDMethodology} value={methodology.name}>
+      {methodology.name}
+    </option>
+  ))}
+</select>
+
+
+
+
+
+  {formErrors.methodology && (
+    <p className="mt-1 text-sm text-red-600">{formErrors.methodology}</p>
+  )}
+</div>
+
+
+
+
+
+
+
+
+                
                 {formErrors.methodology && (
                   <p className="mt-1 text-sm text-red-600">{formErrors.methodology}</p>
                 )}

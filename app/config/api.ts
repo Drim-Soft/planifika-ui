@@ -13,6 +13,12 @@ export const API_CONFIG_ORGANIZATIONS = {
   RETRY_DELAY: 1000, // 1 segundo
 };
 
+export const API_CONFIG_PROJECTS_PLANIFIKA = {
+  BASE_URL: process.env.NEXT_PUBLIC_API_PROJECTS_URL,
+  TIMEOUT: 15000, // 15 segundos (puede demorar más por el backend en Java)
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000,
+};
 // Headers por defecto para todas las peticiones API
 export const DEFAULT_API_HEADERS = {
   'Content-Type': 'application/json',

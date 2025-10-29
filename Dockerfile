@@ -1,12 +1,13 @@
-FROM node:18-alpine AS builder
+# Etapa única (modo desarrollo)
+FROM node:18-alpine
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-RUN npm run build
 
-FROM node:18-alpine
-WORKDIR /app
-COPY --from=builder /app ./
+# Expón el puerto
 EXPOSE 3000
-CMD ["npm", "start"]
+
+# Inicia Next.js en modo desarrollo para ver todos los console.log()
+CMD ["npm", "run", "dev"]
