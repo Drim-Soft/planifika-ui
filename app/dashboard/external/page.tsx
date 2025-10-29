@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { getRoleLabel } from "../../utils/roleUtils";
 import { projectService } from "../../services/projectService";
 import { Project } from "../../types/project";
+import SidebarProfile from "../../components/SidebarProfile";
 
 // Mock data para proyectos externos
 const mockExternalProjects = [
@@ -112,10 +111,10 @@ export default function ExternalDashboard() {
 
   // Calcular estadísticas
   useEffect(() => {
-    const total = projects.length;
-    const active = projects.filter(p => p.status === "En Progreso").length;
-    const completed = projects.filter(p => p.status === "Completado").length;
-    const pending = projects.filter(p => p.status === "Pendiente").length;
+  const total = projects.length;
+  const active = projects.filter((p: any) => p.status === "En Progreso").length;
+  const completed = projects.filter((p: any) => p.status === "Completado").length;
+  const pending = projects.filter((p: any) => p.status === "Pendiente").length;
 
     setStats({
       totalProjects: total,
@@ -166,45 +165,10 @@ export default function ExternalDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-3">
-              <Image
-                src="/assets/images/planifika_logo.png"
-                alt="Planifika Logo"
-                width={40}
-                height={40}
-                className="w-10 h-10"
-              />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  <span className="text-blue-600">Planifika</span>
-                </h1>
-                <p className="text-sm text-gray-600">Dashboard Externo</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                <p className="text-xs text-gray-500">Usuario Externo</p>
-              </div>
-              <button
-                onClick={logout}
-                className="text-gray-500 hover:text-gray-700 text-sm font-medium"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Contenido principal */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gray-50 flex">
+      <SidebarProfile />
+      <div className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Bienvenida */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -490,6 +454,7 @@ export default function ExternalDashboard() {
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }

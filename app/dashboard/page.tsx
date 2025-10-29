@@ -83,6 +83,28 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* Foto de perfil */}
+              {user.photoUrl ? (
+                user.photoUrl.startsWith('http') ? (
+                  <img
+                    src={user.photoUrl}
+                    alt="Foto de perfil"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-full object-cover border"
+                  />
+                ) : (
+                  <Image
+                    src={user.photoUrl}
+                    alt="Foto de perfil"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-full object-cover border"
+                  />
+                )
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">?</div>
+              )}
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
                 <p className="text-xs text-gray-500">{getRoleLabel(user.role)}</p>

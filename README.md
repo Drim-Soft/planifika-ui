@@ -5,7 +5,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ```bash
 docker build -t planifika-ui .
-docker run -p 3000:3000 planifika-ui
+docker run  -p 3000:3000 planifika-ui
 ```
 
 ## Getting Started

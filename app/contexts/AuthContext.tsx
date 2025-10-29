@@ -190,7 +190,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         id: userInfo.userId || 0,
         name: userInfo.name || '',
         email: userInfo.email || '',
-        photoUrl: userInfo.photoUrl || '',
+  photoUrl: (userInfo.photoUrl || '').trim(),
         role: finalRole,
         status: userInfo.iduserstatus || 1,
         organizationId: userInfo.idorganization || undefined,
@@ -273,68 +273,83 @@ export function AuthProvider({ children }: AuthProviderProps) {
         finalRole = UserRole.COLLABORATOR;
       }
       
-      // Crear objeto usuario con información real del backend
-      // Mapear los campos del backend a los campos del frontend
-      const userData: User = {
-        id: userInfo.idUser || 0,
-        name: userInfo.name || '',
-        email: data.email, // El email viene del login, no del backend
-        photoUrl: userInfo.photoUrl || '',
-        role: finalRole,
-        status: userInfo.idUserStatus || 1,
-        organizationId: userInfo.idOrganization || undefined,
-        supabaseUserId: userInfo.supabaseUserId || '0', // Usar el supabaseUserId del backend
-      };
-      
-      console.log('=== DATOS FINALES DEL USUARIO ===');
-      console.log('ID del usuario:', userData.id);
-      console.log('Nombre:', userData.name);
-      console.log('Email:', userData.email);
-      console.log('Rol:', userData.role);
-      console.log('Estado:', userData.status);
-      console.log('Organización:', userData.organizationId);
-      console.log('Supabase ID:', userData.supabaseUserId);
-      console.log('================================');
-      
-      console.log('=== VERIFICACIÓN DE DATOS ===');
-      console.log('¿ID es válido?', userData.id > 0 ? 'SÍ' : 'NO');
-      console.log('¿Nombre está presente?', userData.name ? 'SÍ' : 'NO');
-      console.log('¿Email está presente?', userData.email ? 'SÍ' : 'NO');
-      console.log('¿Rol está definido?', userData.role !== undefined ? 'SÍ' : 'NO');
-      console.log('¿Supabase ID está presente?', userData.supabaseUserId ? 'SÍ' : 'NO');
-      console.log('==============================');
-      
-      console.log('Final external user data:', userData);
-      console.log('Final role value:', userData.role);
 
-      // Guardar en localStorage
-      localStorage.setItem('planifika_user', JSON.stringify(userData));
-      localStorage.setItem('planifika_token', response.access_token);
-      
-      console.log('=== GUARDADO EN LOCALSTORAGE ===');
-      console.log('Usuario guardado:', JSON.stringify(userData));
-      console.log('Token guardado:', response.access_token ? 'Presente' : 'Ausente');
-      console.log('===============================');
+        // Usar el usuario y token retornados por el backend
+        // El backend debe retornar: { user: { ... }, access_token: '...' }
+        const backendUser = response.user as any;
+        // Resolver ID de Planifika con múltiples variantes
+        let resolvedId: number =
+          backendUser?.idPlanifikaUser ||
+          backendUser?.idUser ||
+          backendUser?.iduser ||
+          (typeof backendUser?.id === 'number' ? backendUser.id : 0) ||
+          0;
 
-      setUser(userData);
-      
-      console.log('=== ESTADO ACTUALIZADO ===');
-      console.log('Usuario asignado al estado:', userData);
-      console.log('¿Usuario está presente?', userData ? 'SÍ' : 'NO');
-      console.log('==========================');
+        // Resolver supabaseUserId (UUID)
+        const resolvedSupabaseUserId: string =
+          backendUser?.supabaseUserId ||
+          backendUser?.supabaseuserid ||
+          (typeof backendUser?.id === 'string' ? backendUser.id : '') ||
+          '';
 
-      // Redireccionar al dashboard académico
-      console.log('=== REDIRECCIÓN ===');
-      console.log('Redirigiendo a:', '/dashboard/academic');
-      console.log('==================');
-      
-      router.push('/dashboard/academic');
-      
-      console.log('=== LOGIN EXTERNO COMPLETADO ===');
-      console.log('Redirección ejecutada exitosamente');
-      console.log('================================');
+        console.log('[externalLogin] backendUser recibido:', backendUser);
+        console.log('[externalLogin] resolvedId inicial:', resolvedId, 'resolvedSupabaseUserId:', resolvedSupabaseUserId);
 
-      return response;
+        // Si el ID de Planifika vino en 0, intentar recuperarlo por Supabase ID
+        if ((!resolvedId || resolvedId === 0) && resolvedSupabaseUserId) {
+          try {
+            console.log('Intentando obtener id de Planifika por supabaseUserId:', resolvedSupabaseUserId);
+            const fullUserInfo = await authService.getUserBySupabaseId(resolvedSupabaseUserId, response.access_token);
+            resolvedId = fullUserInfo?.iduser || fullUserInfo?.idUser || fullUserInfo?.id || resolvedId || 0;
+            console.log('[externalLogin] Resuelto id por Supabase ID:', resolvedId, 'fullUserInfo:', fullUserInfo);
+          } catch (e) {
+            console.warn('No se pudo resolver el id de Planifika por Supabase ID:', e);
+          }
+        }
+
+        // Si aún no tenemos ID, intentar por email
+        if ((!resolvedId || resolvedId === 0) && (backendUser?.email || data.email)) {
+          try {
+            const emailToQuery = backendUser?.email || data.email;
+            console.log('Intentando obtener id de Planifika por email:', emailToQuery);
+            const emailUserInfo = await authService.getUserByEmail(emailToQuery, response.access_token);
+            resolvedId = emailUserInfo?.iduser || emailUserInfo?.idUser || emailUserInfo?.id || resolvedId || 0;
+            console.log('[externalLogin] Resuelto id por email:', resolvedId, 'emailUserInfo:', emailUserInfo);
+          } catch (e) {
+            console.warn('No se pudo resolver el id de Planifika por email:', e);
+          }
+        }
+
+        const userData: User = {
+          id: resolvedId || 0,
+          name: backendUser?.name || formatEmailToName(data.email),
+          email: backendUser?.email || data.email,
+          photoUrl: (backendUser?.photoUrl || '').trim(),
+          role: finalRole,
+          status: backendUser?.iduserstatus || backendUser?.idUserStatus || 1,
+          organizationId: backendUser?.idorganization || backendUser?.idOrganization || undefined,
+          supabaseUserId: resolvedSupabaseUserId || '0',
+        };
+
+        if (!userData.id || userData.id === 0) {
+          console.warn('[externalLogin] ⚠️ El ID final del usuario sigue siendo 0. Revisa backend mapping de user.id/idUser.');
+        } else {
+          console.log('[externalLogin] ✅ ID final de usuario resuelto:', userData.id);
+        }
+
+        console.log('Final external user data:', userData);
+        console.log('Final role value:', userData.role);
+
+        // Guardar en localStorage
+        localStorage.setItem('planifika_user', JSON.stringify(userData));
+        localStorage.setItem('planifika_token', response.access_token);
+
+        setUser(userData);
+
+        // Redireccionar al dashboard académico
+        router.push('/dashboard/academic');
+
+        return response;
     } catch (error) {
       const authError: AuthError = {
         message: error instanceof Error ? error.message : 'Error desconocido durante el login externo',
@@ -391,6 +406,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
   };
 
+  // Permite actualizar parcialmente el usuario en memoria/localStorage
+  const updateUser = (partial: Partial<User>) => {
+    setUser((prev: User | null) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...partial } as User;
+      try {
+        localStorage.setItem('planifika_user', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -400,6 +427,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     externalLogin,
     logout,
     error,
+    updateUser,
   };
 
   return (
