@@ -447,52 +447,6 @@ setUserProjects(projectsWithRoles);
           </div>
         </div>
 
-        {/* Actividad Reciente */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-100 rounded-full">
-                      <div className="text-sm">✅</div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        Completaste el proyecto "Análisis de Datos con Python"
-                      </p>
-                      <p className="text-xs text-gray-500">Hace 2 días</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-full">
-                      <div className="text-sm">📝</div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        Actualizaste el progreso de "Sistema de Gestión Académica"
-                      </p>
-                      <p className="text-xs text-gray-500">Hace 5 días</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <div className="text-sm">➕</div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        Creaste el proyecto "Aplicación Móvil de Tareas"
-                      </p>
-                      <p className="text-xs text-gray-500">Hace 1 semana</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div> {/* ← este cierra totalmente la sección de actividad reciente */}
-
 
             {/* =========================
                   Modales de Proyecto
