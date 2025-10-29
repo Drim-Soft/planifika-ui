@@ -56,7 +56,8 @@ export default function SidebarProfile({
     const currentRoleLabel = getUserRoleLabel();
 
     // Determinar si mostrar "Editar Perfil" basado en el rol real
-    const shouldShowEditProfile = !hideEdit && user?.role === UserRole.EXTERNAL;
+    // Permitir editar perfil para ADMIN y EXTERNAL
+    const shouldShowEditProfile = !hideEdit && (user?.role === UserRole.EXTERNAL || user?.role === UserRole.ADMIN);
 
     // Verificar si el usuario tiene acceso a tareas
     const hasTaskAccess = user?.role === UserRole.EXTERNAL || user?.role === UserRole.COLLABORATOR;

@@ -14,7 +14,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 
 export default function CreateOrganization() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logout, updateUser } = useAuth();
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(true);
 
@@ -29,6 +29,13 @@ export default function CreateOrganization() {
       router.push('/dashboard');
       return;
     }
+
+    // Si el administrador YA tiene organización, redirigirlo al dashboard externo
+    if (user && user.role === UserRole.ADMIN && user.organizationId) {
+      console.log('Administrador ya tiene organización, redirigiendo a dashboard externo');
+      router.push('/dashboard/external');
+      return;
+    }
   }, [isAuthenticated, authLoading, user, router]);
 
   const handleCreateOrganization = async (organizationData: Omit<Organization, 'IDOrganization'>) => {
@@ -36,8 +43,14 @@ export default function CreateOrganization() {
       const newOrganization = await organizationService.createOrganization(organizationData);
       console.log("Organización creada:", newOrganization);
       await userService.updateUserOrganization(user!.id, newOrganization?.id!);
-      // Redirigir al dashboard del administrador tras crear y asociar
-      router.push('/dashboard');
+      
+      // Actualizar el usuario en el contexto y localStorage
+      if (updateUser) {
+        updateUser({ organizationId: newOrganization?.id });
+      }
+      
+      // Redirigir al dashboard externo tras crear y asociar
+      router.push('/dashboard/external');
     } catch (error) {
       console.error("Error al crear organización:", error);
       throw error;
