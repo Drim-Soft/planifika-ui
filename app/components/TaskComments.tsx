@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { PublicMessage } from '@/app/types/publicMessage';
 import { publicMessageService } from '@/app/services/publicMessageService';
+import { userService } from '@/app/services/userService';
 import { useAuth } from '@/app/contexts/AuthContext';
 
 interface TaskCommentsProps {
@@ -13,6 +14,7 @@ interface TaskCommentsProps {
 export default function TaskComments({ taskId, onCommentAdded }: TaskCommentsProps) {
   const { user } = useAuth();
   const [comments, setComments] = useState<PublicMessage[]>([]);
+  const [userNames, setUserNames] = useState<Map<number, string>>(new Map());
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,11 +26,54 @@ export default function TaskComments({ taskId, onCommentAdded }: TaskCommentsPro
     loadComments();
   }, [taskId]);
 
+  // Función para cargar nombres de usuarios
+  const loadUserNames = async (userIds: number[]) => {
+    const newUserNames = new Map<number, string>();
+
+    // Cargar nombres de usuarios que no sean el actual (el actual se usa directamente de user?.name)
+    const userIdsToLoad = userIds.filter(id => id !== user?.id && id !== undefined && id !== null);
+    
+    if (userIdsToLoad.length === 0) {
+      return; // No hay usuarios que cargar
+    }
+    
+    const loadPromises = userIdsToLoad.map(async (userId) => {
+      try {
+        const userProfile = await userService.getUserById(userId);
+        const userName = userProfile?.name || `Usuario ${userId}`;
+        newUserNames.set(userId, userName);
+      } catch (error) {
+        console.error(`Error loading user ${userId}:`, error);
+        // Si falla, usar placeholder
+        newUserNames.set(userId, `Usuario ${userId}`);
+      }
+    });
+
+    await Promise.all(loadPromises);
+    
+    // Actualizar el estado con todos los nombres cargados
+    setUserNames(prev => {
+      const combined = new Map(prev);
+      newUserNames.forEach((name, id) => {
+        combined.set(id, name);
+      });
+      return combined;
+    });
+  };
+
   const loadComments = async () => {
     try {
       setIsLoading(true);
       const taskComments = await publicMessageService.getPublicMessagesByTask(taskId);
       setComments(taskComments);
+
+      // Obtener IDs únicos de usuarios (excluyendo al usuario actual, ya que usamos user?.name directamente)
+      const uniqueUserIds = [...new Set(taskComments.map(c => c.IDUser).filter(id => id !== undefined && id !== null && id !== user?.id))];
+      
+      // Cargar nombres de usuarios que no sean el actual
+      if (uniqueUserIds.length > 0) {
+        await loadUserNames(uniqueUserIds);
+      }
     } catch (error) {
       console.error('Error loading comments:', error);
     } finally {
@@ -42,6 +87,7 @@ export default function TaskComments({ taskId, onCommentAdded }: TaskCommentsPro
 
     try {
       setIsSubmitting(true);
+
       await publicMessageService.createPublicMessage({
         IDUser: user.id,
         IDTaskRef: taskId,
@@ -103,7 +149,9 @@ export default function TaskComments({ taskId, onCommentAdded }: TaskCommentsPro
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      return date.toLocaleString('es-ES', {
+      // Formatear con zona horaria de Colombia (America/Bogota)
+      return date.toLocaleString('es-CO', {
+        timeZone: 'America/Bogota',
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -159,10 +207,22 @@ export default function TaskComments({ taskId, onCommentAdded }: TaskCommentsPro
                     <div className="flex-1">
                       <p className="text-sm text-gray-900">{comment.content}</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {comment.userName || `Usuario ${comment.IDUser}`} • {formatDate(comment.date)}
+                        {(() => {
+                          const userId = comment.IDUser;
+                          if (!userId) {
+                            return user?.name || 'Usuario desconocido';
+                          }
+                          // Si es el usuario actual, usar su nombre directamente
+                          if (user?.id === userId && user?.name) {
+                            return user.name;
+                          }
+                          // Si no, usar el nombre cargado del servicio
+                          const userName = userNames.get(userId);
+                          return userName || `Usuario ${userId}`;
+                        })()} • {formatDate(comment.date)}
                       </p>
                     </div>
-                    {comment.IDUser === user?.id && (
+                    {user?.id && comment.IDUser === user.id && (
                       <div className="relative">
                         <button
                           onClick={() => setShowMenuId(showMenuId === comment.IDPublicMessage ? null : comment.IDPublicMessage || null)}
