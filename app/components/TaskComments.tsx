@@ -207,7 +207,7 @@ export default function TaskComments({ taskId, onCommentAdded }: TaskCommentsPro
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
                   />
                   <div className="flex gap-2 mt-2">
@@ -298,7 +298,7 @@ export default function TaskComments({ taskId, onCommentAdded }: TaskCommentsPro
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder="Escribe un comentario..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows={3}
         />
         <button
