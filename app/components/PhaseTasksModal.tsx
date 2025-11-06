@@ -6,6 +6,7 @@ import { phaseService } from "../services/phaseService";
 import { Task } from "@/app/types/task";
 import { Phase } from "@/app/types/phase";
 import CreateTaskModal from "./CreateTaskModal";
+import TaskComments from "./TaskComments";
 
 interface PhaseTasksModalProps {
   phase: Phase;
@@ -22,6 +23,7 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
   const [downloadingFiles, setDownloadingFiles] = useState<Set<number>>(new Set());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
   const [editForm, setEditForm] = useState({
     name: phase.name,
     description: phase.description || '',
@@ -259,6 +261,25 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
     } finally {
       setLoading(false);
     }
+  };
+
+  // Función para expandir/colapsar comentarios de una tarea
+  const toggleTaskComments = (taskId: number) => {
+    setExpandedTasks((prev: Set<number>) => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  // Función para manejar cuando se agrega un comentario
+  const handleCommentAdded = () => {
+    // Opcional: recargar tareas si es necesario
+    reloadTasks();
   };
 
   // Función para descargar archivo de una tarea
@@ -604,6 +625,36 @@ export default function PhaseTasksModal({ phase, onClose, onPhaseUpdated, onPhas
                               )}
                             </button>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Botón para mostrar/ocultar comentarios */}
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <button
+                          onClick={() => task.idTask && toggleTaskComments(task.idTask)}
+                          className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                        >
+                          <svg 
+                            className={`w-4 h-4 mr-1 transition-transform ${
+                              task.idTask && expandedTasks.has(task.idTask) ? 'rotate-180' : ''
+                            }`}
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                          {task.idTask && expandedTasks.has(task.idTask) ? 'Ocultar' : 'Ver'} comentarios
+                        </button>
+                      </div>
+
+                      {/* Comentarios expandidos */}
+                      {task.idTask && expandedTasks.has(task.idTask) && (
+                        <div className="mt-3">
+                          <TaskComments 
+                            taskId={task.idTask} 
+                            onCommentAdded={handleCommentAdded}
+                          />
                         </div>
                       )}
                     </div>
