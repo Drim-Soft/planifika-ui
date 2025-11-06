@@ -64,14 +64,14 @@ class PublicMessageService {
     return this.request<PublicMessage[]>(`/public-messages/user/${userId}`);
   }
 
-  async createPublicMessage(message: Omit<PublicMessage, 'idPublicMessage' | 'date'>): Promise<PublicMessage> {
+  async createPublicMessage(message: { IDUser: number; IDTaskRef: number; content: string }): Promise<PublicMessage> {
     return this.request<PublicMessage>('/public-messages', {
       method: 'POST',
       body: JSON.stringify(message),
     });
   }
 
-  async updatePublicMessage(id: number, message: Partial<PublicMessage>): Promise<PublicMessage> {
+  async updatePublicMessage(id: number, message: { content: string }): Promise<PublicMessage> {
     return this.request<PublicMessage>(`/public-messages/${id}`, {
       method: 'PUT',
       body: JSON.stringify(message),

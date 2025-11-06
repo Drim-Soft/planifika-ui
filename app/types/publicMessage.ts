@@ -1,8 +1,8 @@
 export interface PublicMessage {
-  idPublicMessage: number;
-  idUser: number;
-  idTask: number;
+  IDPublicMessage?: number;
+  IDUser: number;
+  IDTaskRef: number;
   content: string;
-  date: string;
+  date?: string;
   userName?: string; // Campo adicional para mostrar el nombre del usuario
 }

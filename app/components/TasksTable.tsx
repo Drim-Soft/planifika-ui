@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import {Task} from "@/app/types/task";
 import {TaskPriority, TaskStatus} from "@/app/types/taskStatus";
+import TaskComments from "@/app/components/TaskComments";
 
 interface TasksTableProps {
     tasks: Task[];
@@ -17,6 +18,7 @@ type SortDirection = 'asc' | 'desc';
 export default function TasksTable({ tasks, taskStatuses, taskPriorities, onTaskUpdate }: TasksTableProps) {
     const [sortField, setSortField] = useState<SortField>('startDate');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -92,6 +94,23 @@ export default function TasksTable({ tasks, taskStatuses, taskPriorities, onTask
         return sortDirection === 'asc' ? '↑' : '↓';
     };
 
+    const toggleTaskExpansion = (taskId: number) => {
+        setExpandedTasks(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(taskId)) {
+                newSet.delete(taskId);
+            } else {
+                newSet.add(taskId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleCommentAdded = () => {
+        // Refrescar las tareas después de agregar un comentario
+        onTaskUpdate();
+    };
+
     return (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
             {/* Table Header */}
@@ -154,56 +173,90 @@ export default function TasksTable({ tasks, taskStatuses, taskPriorities, onTask
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Progreso
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Comentarios
+                        </th>
                     </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                    {sortedTasks.map((task) => (
-                        <tr key={task.idTask} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                    <div className="ml-4">
-                                        <div className="text-sm font-medium text-gray-900">
-                                            {task.name}
-                                        </div>
-                                        {task.description && (
-                                            <div className="text-sm text-gray-500 truncate max-w-xs">
-                                                {task.description}
+                    {sortedTasks.map((task) => {
+                        const isExpanded = expandedTasks.has(task.idTask!);
+                        return (
+                            <Fragment key={task.idTask}>
+                                <tr className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            <div className="ml-4">
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    {task.name}
+                                                </div>
+                                                {task.description && (
+                                                    <div className="text-sm text-gray-500 truncate max-w-xs">
+                                                        {task.description}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatDate(task.startDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatDate(task.endDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(task.IDTaskStatusRef)}`}>
-                    {task.taskStatus?.name || 'Sin estado'}
-                  </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(task.IDTaskPriorityRef)}`}>
-                    {task.taskPriority?.name || 'Sin prioridad'}
-                  </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center space-x-2">
-                                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                                        <div
-                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                            style={{ width: `${task.percentageProgress || 0}%` }}
-                                        ></div>
-                                    </div>
-                                    <span className="text-sm text-gray-600 w-8">
-                      {task.percentageProgress || 0}%
-                    </span>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {formatDate(task.startDate)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {formatDate(task.endDate)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(task.IDTaskStatusRef)}`}>
+                            {task.taskStatus?.name || 'Sin estado'}
+                          </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(task.IDTaskPriorityRef)}`}>
+                            {task.taskPriority?.name || 'Sin prioridad'}
+                          </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center space-x-2">
+                                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                    style={{ width: `${task.percentageProgress || 0}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-sm text-gray-600 w-8">
+                              {task.percentageProgress || 0}%
+                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <button
+                                            onClick={() => toggleTaskExpansion(task.idTask!)}
+                                            className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+                                        >
+                                            <svg 
+                                                className={`w-5 h-5 mr-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                fill="none" 
+                                                stroke="currentColor" 
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                            {isExpanded ? 'Ocultar' : 'Ver'} comentarios
+                                        </button>
+                                    </td>
+                                </tr>
+                                {isExpanded && task.idTask && (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-4 bg-gray-50">
+                                            <TaskComments 
+                                                taskId={task.idTask} 
+                                                onCommentAdded={handleCommentAdded}
+                                            />
+                                        </td>
+                                    </tr>
+                                )}
+                            </Fragment>
+                        );
+                    })}
                     </tbody>
                 </table>
 
