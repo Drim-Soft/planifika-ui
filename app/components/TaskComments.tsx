@@ -148,17 +148,42 @@ export default function TaskComments({ taskId, onCommentAdded }: TaskCommentsPro
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
     try {
-      const date = new Date(dateString);
-      // Formatear con zona horaria de Colombia (America/Bogota)
-      return date.toLocaleString('es-CO', {
+      let date: Date;
+      
+      // Si la fecha tiene zona horaria explícita, usarla directamente
+      if (dateString.match(/[Z+-]\d{2}:?\d{2}$/)) {
+        date = new Date(dateString);
+      } else {
+        // El backend envía LocalDateTime sin zona horaria
+        // Asumimos que viene en UTC y necesitamos convertirla a hora de Colombia
+        // Agregar 'Z' para indicar que es UTC
+        const normalizedDate = dateString.includes('T') 
+          ? dateString.trim() + 'Z'
+          : dateString.trim() + 'T00:00:00Z';
+        date = new Date(normalizedDate);
+      }
+      
+      // Verificar que la fecha sea válida
+      if (isNaN(date.getTime())) {
+        return dateString;
+      }
+      
+      // Convertir la fecha UTC a la zona horaria de Colombia (America/Bogota)
+      // Colombia está en UTC-5, así que necesitamos formatear con la zona horaria correcta
+      const formatter = new Intl.DateTimeFormat('es-CO', {
         timeZone: 'America/Bogota',
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        hour12: false, // Formato de 24 horas
       });
-    } catch {
+      
+      const formatted = formatter.format(date);
+      return formatted;
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
       return dateString;
     }
   };
