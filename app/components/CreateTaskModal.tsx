@@ -41,6 +41,75 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   const [taskFileInfo, setTaskFileInfo] = useState<{name: string, size: number, url: string} | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   
+  // Función helper para convertir fecha del input (YYYY-MM-DD) a formato que evite problemas de zona horaria
+  // El backend está interpretando las fechas como UTC y restando un día, así que compensamos agregando un día
+  const formatDateForBackend = (dateString: string | undefined): string | undefined => {
+    if (!dateString) return undefined;
+    
+    // Si la fecha ya está en formato ISO completo, extraer solo la parte de fecha
+    if (dateString.includes('T')) {
+      dateString = dateString.split('T')[0];
+    }
+    
+    // Parsear la fecha YYYY-MM-DD
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0]);
+      const month = parseInt(parts[1]) - 1; // JavaScript months are 0-indexed
+      const day = parseInt(parts[2]);
+      
+      // Crear fecha en hora local y agregar un día para compensar el desfase del backend
+      const localDate = new Date(year, month, day);
+      localDate.setDate(localDate.getDate() + 1); // Agregar un día
+      
+      // Extraer componentes en hora local
+      const adjustedYear = localDate.getFullYear();
+      const adjustedMonth = String(localDate.getMonth() + 1).padStart(2, '0');
+      const adjustedDay = String(localDate.getDate()).padStart(2, '0');
+      
+      return `${adjustedYear}-${adjustedMonth}-${adjustedDay}`;
+    }
+    
+    // Si llegamos aquí, devolver la fecha original
+    return dateString;
+  };
+
+  // Función helper para convertir fecha del backend a formato del input (YYYY-MM-DD)
+  // Como el backend guardó un día menos, necesitamos restar un día para mostrar la fecha correcta
+  const formatDateFromBackend = (dateString: string | Date | undefined): string => {
+    if (!dateString) return '';
+    
+    // Convertir a string si es Date
+    let dateStr = typeof dateString === 'string' ? dateString : dateString.toISOString();
+    
+    // Si la fecha ya está en formato ISO completo, extraer solo la parte de fecha
+    if (dateStr.includes('T')) {
+      dateStr = dateStr.split('T')[0];
+    }
+    
+    // Parsear la fecha YYYY-MM-DD
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0]);
+      const month = parseInt(parts[1]) - 1; // JavaScript months are 0-indexed
+      const day = parseInt(parts[2]);
+      
+      // Crear fecha en hora local y restar un día para compensar el desfase del backend
+      const localDate = new Date(year, month, day);
+      localDate.setDate(localDate.getDate() - 1); // Restar un día
+      
+      // Extraer componentes en hora local
+      const adjustedYear = localDate.getFullYear();
+      const adjustedMonth = String(localDate.getMonth() + 1).padStart(2, '0');
+      const adjustedDay = String(localDate.getDate()).padStart(2, '0');
+      
+      return `${adjustedYear}-${adjustedMonth}-${adjustedDay}`;
+    }
+    
+    // Si llegamos aquí, devolver la fecha original
+    return dateStr;
+  };
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -279,8 +348,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       setFormData({
         name: existingTask.name || '',
         description: existingTask.description || '',
-        startDate: existingTask.startDate ? existingTask.startDate.toString() : '',
-        endDate: existingTask.endDate ? existingTask.endDate.toString() : '',
+        startDate: formatDateFromBackend(existingTask.startDate),
+        endDate: formatDateFromBackend(existingTask.endDate),
         timeInvested: existingTask.timeInvested || 0,
         percentageProgress: existingTask.percentageProgress || 0,
         budget: existingTask.budget || 0,
@@ -318,8 +387,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         ...prev,
         name: existingTask.name || prev.name,
         description: existingTask.description || prev.description,
-        startDate: existingTask.startDate ? existingTask.startDate.toString() : prev.startDate,
-        endDate: existingTask.endDate ? existingTask.endDate.toString() : prev.endDate,
+        startDate: formatDateFromBackend(existingTask.startDate),
+        endDate: formatDateFromBackend(existingTask.endDate),
         timeInvested: existingTask.timeInvested || prev.timeInvested,
         percentageProgress: existingTask.percentageProgress || prev.percentageProgress,
         budget: existingTask.budget || prev.budget,
@@ -399,6 +468,10 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         return;
       }
 
+      // Formatear fechas para evitar problemas de zona horaria
+      const formattedStartDate = formatDateForBackend(formData.startDate);
+      const formattedEndDate = formatDateForBackend(formData.endDate);
+
       if (isEditMode && existingTask) {
         // Modo de edición - actualizar tarea existente
         console.log("📝 Actualizando tarea existente:", existingTask.idTask);
@@ -407,8 +480,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         const updateData = {
           name: formData.name,
           description: formData.description || undefined,
-          startDate: formData.startDate || undefined,
-          endDate: formData.endDate || undefined,
+          startDate: formattedStartDate,
+          endDate: formattedEndDate,
           timeInvested: formData.timeInvested || 0,
           percentageProgress: formData.percentageProgress || 0,
           budget: formData.budget || 0,
@@ -455,8 +528,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         const taskData = {
           name: formData.name,
           description: formData.description || undefined,
-          startDate: formData.startDate || undefined,
-          endDate: formData.endDate || undefined,
+          startDate: formattedStartDate,
+          endDate: formattedEndDate,
           timeInvested: formData.timeInvested || 0,
           percentageProgress: formData.percentageProgress || 0,
           budget: formData.budget || 0,
@@ -683,9 +756,10 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               <textarea
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-black"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-black placeholder:text-gray-500"
                 rows={3}
                 placeholder="Descripción de la tarea"
+                style={{ color: '#000000' }}
               />
             </div>
           </div>
