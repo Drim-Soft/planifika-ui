@@ -25,12 +25,6 @@ interface CreateTaskModalProps {
 export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCreated, onTaskUpdated, onTaskDeleted, onRefreshTasks, existingTask }: CreateTaskModalProps) {
   const { user } = useAuth();
   
-  console.log("🚀 CreateTaskModal renderizado con:", {
-    existingTask: existingTask ? existingTask.name : "null",
-    isEditMode: !!existingTask,
-    phaseId,
-    phaseName
-  });
   const [loading, setLoading] = useState(false);
   const [taskStatuses, setTaskStatuses] = useState<TaskStatus[]>([]);
   const [taskPriorities, setTaskPriorities] = useState<TaskPriority[]>([]);
@@ -133,18 +127,14 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
     
     const loadData = async () => {
       if (dataLoaded) {
-        console.log("🔄 Datos ya cargados, omitiendo carga duplicada");
         return;
       }
       
       try {
         setLoading(true);
-        console.log("🔄 Cargando datos para crear tarea...");
         
         // Cargar estados de tarea desde el backend de proyectos
-        console.log("📊 Cargando estados de tarea...");
         const statuses = await taskStatusService.getAllTaskStatuses();
-        console.log("✅ Estados cargados:", statuses);
         // Asegurar que los IDs sean números - usar las propiedades correctas del backend
         const validatedStatuses = statuses.map(status => ({
           ...status,
@@ -155,9 +145,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         }
         
         // Cargar prioridades de tarea desde el backend de proyectos
-        console.log("⚡ Cargando prioridades de tarea...");
         const priorities = await taskPriorityService.getAllTaskPriorities();
-        console.log("✅ Prioridades cargadas:", priorities);
         // Asegurar que los IDs sean números - usar las propiedades correctas del backend
         const validatedPriorities = priorities.map(priority => ({
           ...priority,
@@ -168,15 +156,12 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         }
         
         // Intentar cargar usuarios, pero manejar error 401
-        console.log("👥 Intentando cargar usuarios...");
         try {
           const allUsers = await userService.getAllUsers();
           if (isMounted) {
-            console.log("✅ Usuarios cargados:", allUsers);
             setUsers(allUsers);
           }
         } catch (userError) {
-          console.warn("⚠️ Error cargando usuarios (401 - no autenticado):", userError);
           // Usar usuario actual como fallback
           if (isMounted && user) {
             const currentUser: UserProfile = {
@@ -190,7 +175,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               supabaseUserId: user.supabaseUserId
             };
             setUsers([currentUser]);
-            console.log("✅ Usando usuario actual como fallback:", currentUser);
           } else if (isMounted) {
             // Crear usuario mock si no hay usuario autenticado
             const mockUser: UserProfile = {
@@ -204,7 +188,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               supabaseUserId: "demo-user"
             };
             setUsers([mockUser]);
-            console.log("✅ Usando usuario mock:", mockUser);
           }
         }
         
@@ -216,28 +199,20 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
             // Buscar estado "Pendiente" o usar el primero
             const pendingStatus = validatedStatuses.find(s => s.name.toLowerCase().includes('pendiente')) || validatedStatuses[0];
             updatedFormData.IDTaskStatusRef = pendingStatus.idTaskStatus;
-            console.log("🎯 Estado por defecto:", pendingStatus, "ID:", pendingStatus.idTaskStatus);
           }
           
           if (validatedPriorities.length > 0) {
             // Buscar prioridad "Media" o usar la segunda opción
             const mediumPriority = validatedPriorities.find(p => p.name.toLowerCase().includes('media')) || validatedPriorities[1] || validatedPriorities[0];
             updatedFormData.IDTaskPriorityRef = mediumPriority.idTaskPriority;
-            console.log("🎯 Prioridad por defecto:", mediumPriority, "ID:", mediumPriority.idTaskPriority);
           }
           
           // Actualizar el estado del formulario con todos los valores por defecto
           setFormData(updatedFormData);
           setDataLoaded(true);
-          console.log("✅ Todos los datos cargados correctamente");
-          console.log("📋 FormData actualizado:", updatedFormData);
-          console.log("🔍 Estado seleccionado:", updatedFormData.IDTaskStatusRef);
-          console.log("🔍 Prioridad seleccionada:", updatedFormData.IDTaskPriorityRef);
         }
         
       } catch (error) {
-        console.error("❌ Error cargando datos:", error);
-        
         if (isMounted) {
           // Usar datos mock solo si hay error en estados/prioridades
           const mockStatuses = [
@@ -278,9 +253,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
           
           setFormData(mockFormData);
           setDataLoaded(true);
-          console.log("✅ Datos mock cargados con valores por defecto");
-          console.log("🔍 Estado mock seleccionado:", mockFormData.IDTaskStatusRef);
-          console.log("🔍 Prioridad mock seleccionada:", mockFormData.IDTaskPriorityRef);
         }
       } finally {
         if (isMounted) {
@@ -301,17 +273,12 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   useEffect(() => {
     if (users.length > 0 && formData.IDUserRef === 0) {
       setFormData((prev: typeof formData) => ({ ...prev, IDUserRef: users[0].id }));
-      console.log("🎯 Usuario por defecto establecido:", users[0]);
     }
   }, [users]);
 
   // Establecer valores por defecto cuando se carguen los datos (solo en modo creación)
   useEffect(() => {
     if (dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0 && !isEditMode && !existingTask) {
-      console.log("🔄 Estableciendo valores por defecto después de cargar datos (modo creación)");
-      console.log("🔍 Estado actual:", formData.IDTaskStatusRef);
-      console.log("🔍 Prioridad actual:", formData.IDTaskPriorityRef);
-      
       let needsUpdate = false;
       let updatedData = { ...formData };
       
@@ -319,21 +286,16 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         const pendingStatus = taskStatuses.find((s: TaskStatus) => s.name.toLowerCase().includes('pendiente')) || taskStatuses[0];
         updatedData.IDTaskStatusRef = pendingStatus.idTaskStatus;
         needsUpdate = true;
-        console.log("🎯 Estado por defecto establecido:", pendingStatus);
       }
       
       if (formData.IDTaskPriorityRef === 0 || !taskPriorities.find((p: TaskPriority) => p.idTaskPriority === formData.IDTaskPriorityRef)) {
         const mediumPriority = taskPriorities.find((p: TaskPriority) => p.name.toLowerCase().includes('media')) || taskPriorities[1] || taskPriorities[0];
         updatedData.IDTaskPriorityRef = mediumPriority.idTaskPriority;
         needsUpdate = true;
-        console.log("🎯 Prioridad por defecto establecida:", mediumPriority);
       }
       
       if (needsUpdate) {
         setFormData(updatedData);
-        console.log("✅ Valores por defecto actualizados:", updatedData);
-        console.log("🔍 Nuevo estado:", updatedData.IDTaskStatusRef);
-        console.log("🔍 Nueva prioridad:", updatedData.IDTaskPriorityRef);
       }
     }
   }, [dataLoaded, taskStatuses, taskPriorities, isEditMode, existingTask]);
@@ -342,7 +304,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   useEffect(() => {
     if (existingTask) {
       setIsEditMode(true);
-      console.log("📝 Cargando datos de tarea existente:", existingTask);
       
       // Cargar datos del formulario inmediatamente con los valores de la tarea existente
       setFormData({
@@ -361,14 +322,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         IDTaskPriorityRef: existingTask.taskPriority?.idTaskPriority || 0,
         IDUserRef: existingTask.IDUserRef || 0
       });
-      
-      console.log("✅ Datos de tarea cargados en formulario");
-      console.log("🔍 FormData actualizado:", {
-        name: existingTask.name,
-        description: existingTask.description,
-        IDTaskStatusRef: existingTask.taskStatus?.idTaskStatus,
-        IDTaskPriorityRef: existingTask.taskPriority?.idTaskPriority
-      });
     } else {
       setIsEditMode(false);
     }
@@ -377,11 +330,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   // Actualizar datos del formulario cuando se carguen los estados y prioridades en modo de edición
   useEffect(() => {
     if (existingTask && dataLoaded && taskStatuses.length > 0 && taskPriorities.length > 0) {
-      console.log("🔄 Actualizando datos del formulario con estados y prioridades cargados");
-      console.log("🔍 Tarea existente:", existingTask);
-      console.log("🔍 Estados disponibles:", taskStatuses);
-      console.log("🔍 Prioridades disponibles:", taskPriorities);
-      
       // Actualizar todos los campos de la tarea existente
       setFormData(prev => ({
         ...prev,
@@ -400,15 +348,12 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         IDTaskPriorityRef: existingTask.taskPriority?.idTaskPriority || prev.IDTaskPriorityRef,
         IDUserRef: existingTask.IDUserRef || prev.IDUserRef
       }));
-      
-      console.log("✅ Formulario actualizado con todos los datos de la tarea");
     }
   }, [existingTask, dataLoaded, taskStatuses, taskPriorities, phaseId]);
 
   // Cargar información del archivo si existe una tarea
   useEffect(() => {
     if (existingTask && existingTask.fileURL) {
-      console.log("📎 Tarea existente con archivo:", existingTask.fileURL);
       // Extraer nombre del archivo de la URL
       const fileName = existingTask.fileURL.split('/').pop() || 'archivo_adjunto';
       setTaskFileInfo({
@@ -421,8 +366,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log("🔍 Validando formulario:", formData);
     
     if (!formData.name.trim()) {
       alert("❌ El nombre de la tarea es obligatorio");
@@ -448,15 +391,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       setLoading(true);
       
       // Obtener nombres textuales de los IDs seleccionados
-      console.log('🔍 Buscando estado con ID:', formData.IDTaskStatusRef);
-      console.log('🔍 Estados disponibles:', taskStatuses);
       const selectedStatus = taskStatuses.find((s: TaskStatus) => s.idTaskStatus === formData.IDTaskStatusRef);
-      console.log('✅ Estado encontrado:', selectedStatus);
-      
-      console.log('🔍 Buscando prioridad con ID:', formData.IDTaskPriorityRef);
-      console.log('🔍 Prioridades disponibles:', taskPriorities);
       const selectedPriority = taskPriorities.find((p: TaskPriority) => p.idTaskPriority === formData.IDTaskPriorityRef);
-      console.log('✅ Prioridad encontrada:', selectedPriority);
       
       if (!selectedStatus) {
         alert("Debe seleccionar un estado válido para la tarea");
@@ -474,8 +410,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
 
       if (isEditMode && existingTask) {
         // Modo de edición - actualizar tarea existente
-        console.log("📝 Actualizando tarea existente:", existingTask.idTask);
-        
         // Preparar datos para actualización
         const updateData = {
           name: formData.name,
@@ -494,14 +428,11 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
           idtaskPriorityRef: formData.IDTaskPriorityRef
         };
         
-        console.log("📤 Datos de actualización:", updateData);
-        
         // Actualizar la tarea
         const updatedTask = await taskService.updateTask(existingTask.idTask!, updateData);
         
         // Si hay archivo seleccionado, subirlo por separado
         if (selectedFile) {
-          console.log("📎 Subiendo archivo para tarea actualizada:", selectedFile.name);
           const formDataWithFile = new FormData();
           formDataWithFile.append('file', selectedFile);
           
@@ -515,15 +446,12 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         
         // Recargar la lista de tareas para mostrar los cambios
         if (onRefreshTasks) {
-          console.log("🔄 Recargando lista de tareas después de actualizar");
           onRefreshTasks();
         }
         
         alert("✅ Tarea actualizada correctamente");
       } else {
         // Modo de creación - crear nueva tarea
-        console.log("➕ Creando nueva tarea");
-        
         // Preparar datos según el formato esperado por el backend
         const taskData = {
           name: formData.name,
@@ -542,15 +470,8 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
           userId: formData.IDUserRef // ✅ Parámetro correcto
         };
         
-        console.log("📤 Datos preparados para el backend:", taskData);
-        console.log("🔍 Estado seleccionado:", selectedStatus);
-        console.log("🔍 Prioridad seleccionada:", selectedPriority);
-        console.log("🔍 statusName:", selectedStatus.name);
-        console.log("🔍 priorityName:", selectedPriority.name);
-        
         // Si hay archivo seleccionado, usar el endpoint de creación con archivo
         if (selectedFile) {
-          console.log("📎 Creando tarea con archivo:", selectedFile.name);
           const formDataWithFile = new FormData();
           formDataWithFile.append('file', selectedFile);
           
@@ -562,18 +483,10 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
             }
           });
           
-          console.log("📤 FormData keys:", Array.from(formDataWithFile.keys()));
-          console.log("📤 FormData values:");
-          for (let [key, value] of formDataWithFile.entries()) {
-            console.log(`  ${key}: ${value}`);
-          }
-          
           // Usar endpoint de creación con archivo
           const newTask = await taskService.createTaskWithFile(formDataWithFile);
           onTaskCreated(newTask);
         } else {
-          console.log("📝 Creando tarea sin archivo");
-          
           // Crear la tarea sin archivo usando el endpoint correcto
           const newTask = await taskService.createTask(taskData);
           onTaskCreated(newTask);
@@ -581,7 +494,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
         
         // Recargar la lista de tareas para mostrar la nueva tarea
         if (onRefreshTasks) {
-          console.log("🔄 Recargando lista de tareas después de crear");
           onRefreshTasks();
         }
         
@@ -592,7 +504,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       onClose();
       
     } catch (error) {
-      console.error("Error procesando tarea:", error);
       alert(`❌ Error al ${isEditMode ? 'actualizar' : 'crear'} la tarea: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setLoading(false);
@@ -600,19 +511,13 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    console.log(`🔄 Actualizando campo ${field}:`, value, typeof value);
-    console.log(`🔍 Valor anterior de ${field}:`, formData[field as keyof typeof formData]);
-    
     // Validar que el valor no sea NaN para campos numéricos
     if (typeof value === 'number' && isNaN(value)) {
-      console.warn(`⚠️ Valor inválido para ${field}:`, value);
       return;
     }
     
     setFormData((prev: typeof formData) => {
       const updated = { ...prev, [field]: value };
-      console.log(`📋 FormData actualizado:`, updated);
-      console.log(`✅ Nuevo valor de ${field}:`, updated[field as keyof typeof updated]);
       return updated;
     });
   };
@@ -630,7 +535,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
 
     try {
       setDownloadingFile(true);
-      console.log("📥 Descargando archivo de tarea:", existingTask.idTask);
       
       const blob = await taskService.downloadTaskFile(existingTask.idTask);
       
@@ -651,10 +555,7 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      console.log("✅ Archivo descargado correctamente");
-      
     } catch (error) {
-      console.error("❌ Error descargando archivo:", error);
       alert(`❌ Error al descargar el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setDownloadingFile(false);
@@ -677,7 +578,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
 
     try {
       setLoading(true);
-      console.log("🗑️ Eliminando tarea:", existingTask.idTask);
       
       await taskService.deleteTask(existingTask.idTask);
       
@@ -688,7 +588,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       
       // Recargar la lista de tareas para mostrar que se eliminó
       if (onRefreshTasks) {
-        console.log("🔄 Recargando lista de tareas después de eliminar");
         onRefreshTasks();
       }
       
@@ -698,7 +597,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
       onClose();
       
     } catch (error) {
-      console.error("❌ Error eliminando tarea:", error);
       alert(`❌ Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setLoading(false);
@@ -726,13 +624,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
 
         {/* Mostrar formulario directamente */}
         <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Debug info */}
-            <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
-              <div>🔍 Debug - Estado actual: {formData.IDTaskStatusRef}</div>
-              <div>🔍 Debug - Prioridad actual: {formData.IDTaskPriorityRef}</div>
-              <div>🔍 Debug - Estados disponibles: {taskStatuses.map((s: TaskStatus) => `${s.idTaskStatus}:${s.name}`).join(', ')}</div>
-              <div>🔍 Debug - Prioridades disponibles: {taskPriorities.map((p: TaskPriority) => `${p.idTaskPriority}:${p.name}`).join(', ')}</div>
-            </div>
           {/* Información básica */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
@@ -801,27 +692,20 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
                 value={formData.IDTaskStatusRef || ''}
                 onChange={(e) => {
                   const value = e.target.value;
-                  console.log('🔄 Estado seleccionado - ID:', value);
-                  console.log('🔄 Estado seleccionado - Nombre:', e.target.selectedOptions[0]?.text);
                   
                   // Buscar el estado por ID o por nombre si el ID no es válido
                   let selectedStatus;
                   if (value && !isNaN(parseInt(value))) {
                     selectedStatus = taskStatuses.find((s: TaskStatus) => s.idTaskStatus === parseInt(value));
-                    console.log('✅ Estado encontrado por ID:', selectedStatus);
                   } else {
                     // Si el valor es un nombre, buscar por nombre
                     selectedStatus = taskStatuses.find((s: TaskStatus) => s.name === value);
-                    console.log('✅ Estado encontrado por nombre:', selectedStatus);
                   }
                   
                   if (selectedStatus) {
                     // Usar la propiedad correcta según el objeto encontrado
                     const statusId = selectedStatus.idTaskStatus || (selectedStatus as any).idtaskStatus;
-                    console.log('✅ Actualizando IDTaskStatusRef a:', statusId);
                     handleInputChange('IDTaskStatusRef', statusId);
-                  } else {
-                    console.log('❌ Estado no encontrado para valor:', value);
                   }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-black"
@@ -849,27 +733,20 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
                 value={formData.IDTaskPriorityRef || ''}
                 onChange={(e) => {
                   const value = e.target.value;
-                  console.log('🔄 Prioridad seleccionada - ID:', value);
-                  console.log('🔄 Prioridad seleccionada - Nombre:', e.target.selectedOptions[0]?.text);
                   
                   // Buscar la prioridad por ID o por nombre si el ID no es válido
                   let selectedPriority;
                   if (value && !isNaN(parseInt(value))) {
                     selectedPriority = taskPriorities.find((p: TaskPriority) => p.idTaskPriority === parseInt(value));
-                    console.log('✅ Prioridad encontrada por ID:', selectedPriority);
                   } else {
                     // Si el valor es un nombre, buscar por nombre
                     selectedPriority = taskPriorities.find((p: TaskPriority) => p.name === value);
-                    console.log('✅ Prioridad encontrada por nombre:', selectedPriority);
                   }
                   
                   if (selectedPriority) {
                     // Usar la propiedad correcta según el objeto encontrado
                     const priorityId = selectedPriority.idTaskPriority || (selectedPriority as any).idtaskPriority;
-                    console.log('✅ Actualizando IDTaskPriorityRef a:', priorityId);
                     handleInputChange('IDTaskPriorityRef', priorityId);
-                  } else {
-                    console.log('❌ Prioridad no encontrada para valor:', value);
                   }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-black"
@@ -899,7 +776,6 @@ export default function CreateTaskModal({ phaseId, phaseName, onClose, onTaskCre
               value={formData.IDUserRef || ''}
               onChange={(e) => {
                 const value = e.target.value;
-                console.log('🔄 Usuario seleccionado:', value);
                 if (value && !isNaN(parseInt(value))) {
                   handleInputChange('IDUserRef', parseInt(value));
                 }
