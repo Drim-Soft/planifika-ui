@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { hasAdminProjectRole } from "@/app/utils/roleUtils";
 import { phaseService } from "../services/phaseService";
+import { projectService } from "../services/projectService";
 import { Phase } from "@/app/types/phase";
 import PhaseEditModal from "../dashboard/academic/components/PhaseEditModal";
 import PhaseTasksModal from "./PhaseTasksModal";
+import { toast } from "react-hot-toast";
 
 export default function ProjectDetailsModal({ project, onClose, user }: any) {
   if (!project) return null;

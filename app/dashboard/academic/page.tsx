@@ -187,7 +187,31 @@ setUserProjects(projectsWithRoles);
       try {
         setIsLoadingAllProjects(true);
         const projects = await projectService.getAllProjects();
-        setAllProjects(projects);
+        console.log('Proyectos disponibles sin normalizar:', projects);
+        
+        // Normalizar los proyectos para asegurar consistencia de IDs
+        const normalizedProjects = projects.map((p: any) => ({
+          ...p,
+          IDProject: p.IDProject ?? p.idproject ?? p.id ?? p.projectId,
+          IDMethodologyRef: p.IDMethodologyRef ?? p.idmethodologyRef,
+          IDProjectStatusRef: p.IDProjectStatusRef ?? p.idprojectStatusRef,
+          methodology: p.methodology
+            ? {
+                ...p.methodology,
+                IDMethodology: p.methodology.IDMethodology ?? p.methodology.idmethodology,
+              }
+            : null,
+          projectStatus: p.projectStatus
+            ? {
+                ...p.projectStatus,
+                IDProjectStatus:
+                  p.projectStatus.IDProjectStatus ?? p.projectStatus.idprojectStatus,
+              }
+            : null,
+        }));
+
+        console.log('Proyectos disponibles normalizados:', normalizedProjects);
+        setAllProjects(normalizedProjects);
       } catch (err) {
         console.error('Error loading all projects:', err);
       } finally {
@@ -213,55 +237,63 @@ setUserProjects(projectsWithRoles);
 
   // Manejar unirse a un proyecto
   const handleJoinProject = async (project: Project) => {
-    if (!user || !project.IDProject) return;
+    console.log('📌 Validando datos del proyecto:', {
+      project: project,
+      keys: Object.keys(project || {}),
+      hasProject: !!project,
+      hasIDProject: !!project?.IDProject,
+      typeofProject: typeof project,
+      projectId: project?.IDProject
+    });
+
+    // Validar que el proyecto existe
+    if (!project) {
+      console.error('❌ Error: Proyecto no definido');
+      window.alert('Error: No se pudo obtener la información del proyecto');
+      return;
+    }
+
+    // Validar que el usuario existe
+    if (!user?.id) {
+      console.error('❌ Error: Usuario no encontrado o sin ID');
+      window.alert('Error: Usuario no identificado');
+      return;
+    }
+
+    // Validar el ID del proyecto
+    const projectId = project?.IDProject;
+    if (!projectId) {
+      console.error('❌ Error: ID del proyecto no encontrado:', {
+        project: project,
+        projectKeys: Object.keys(project),
+        projectValues: Object.values(project)
+      });
+      window.alert('Error: No se pudo obtener el ID del proyecto');
+      return;
+    }
 
     try {
-      setJoiningProjectId(project.IDProject);
-
-      // Intentar obtener el id de la metodología
-      const methodologyId = project.methodology?.IDMethodology ?? (project as any).IDMethodologyRef;
-
-      // Obtener roles disponibles por metodología
-      let roles: any[] = [];
-      if (methodologyId) {
-        try {
-          roles = await projectService.getRolesByMethodology(Number(methodologyId));
-        } catch (err) {
-          console.warn('No se pudieron obtener roles por metodología:', err);
-        }
-      }
-
-      // También intentar obtener roles embebidos en el objeto de proyecto
-      if (!roles || roles.length === 0) {
-        roles = project.methodology?.roles || [];
-      }
-
-      // Buscar rol adecuado para estudiante/colaborador
-      const preferNames = ['estudiante', 'student', 'colaborador', 'collaborator'];
-      let chosenRole = roles.find((r: any) => {
-        const name = (r.name || r.nombre || '').toString().toLowerCase();
-        return preferNames.some(p => name.includes(p));
+      console.log('🎯 Iniciando proceso de unión al proyecto:', {
+        projectId: projectId,
+        userId: user.id,
+        projectName: project.name
       });
+      
+      setJoiningProjectId(projectId);
 
-      if (!chosenRole && roles.length > 0) {
-        // Fallback al primer rol
-        chosenRole = roles[0];
-      }
+      // Usar el nuevo endpoint de join
+      const response = await projectService.joinProject(projectId, user.id);
+      
+      console.log('✨ Respuesta recibida:', response);
+      
+      // Mostrar el mensaje de respuesta del servidor
+      window.alert(response);
 
-      if (!chosenRole || !chosenRole.IDRole) {
-        window.alert('No se pudo determinar un rol para unirse a este proyecto. Contacta al administrador.');
-        return;
-      }
+      // Cerrar el modal
+      setShowJoinModal(false);
 
-      await projectService.assignUserToProject(Number(project.IDProject), user.id, Number(chosenRole.IDRole));
-
-      window.alert(`Te has unido al proyecto "${project.name}" correctamente.`);
-
-      // Refrescar proyectos del usuario
-      await refreshUserProjects();
-      // también refrescar lista global
-      const all = await projectService.getAllProjects();
-      setAllProjects(all);
+      // Recargar la página para actualizar todos los datos
+      window.location.reload();
 
     } catch (err) {
       console.error('Error joining project:', err);
@@ -563,9 +595,9 @@ setUserProjects(projectsWithRoles);
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {allProjects
-                      .filter(p => !userProjects.some(up => up.IDProject === p.IDProject))
+                      .filter(p => !userProjects.some(up => (up.IDProject && p.IDProject) ? up.IDProject === p.IDProject : false))
                       .map((project) => (
-                        <div key={project.IDProject} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+                        <div key={project.IDProject || 'temp-' + Math.random()} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
                           <div className="p-6">
                             <div className="flex justify-between items-start mb-4">
                               <div className="flex-1">
@@ -591,11 +623,49 @@ setUserProjects(projectsWithRoles);
 
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleJoinProject(project)}
-                                disabled={joiningProjectId === project.IDProject}
+                                onClick={() => {
+                                  // Validación detallada del proyecto
+                                  console.log('🔵 Validación pre-unión:', { 
+                                    project: project,
+                                    projectExists: !!project,
+                                    projectType: typeof project,
+                                    projectKeys: Object.keys(project || {}),
+                                    projectId: project?.IDProject,
+                                    projectName: project?.name,
+                                    rawProject: JSON.stringify(project)
+                                  });
+                                  
+                                  // Verificar que tenemos todos los campos necesarios
+                                  if (!project || typeof project !== 'object') {
+                                    console.error('🚫 Proyecto no es un objeto válido:', project);
+                                    window.alert('Error: Datos del proyecto inválidos');
+                                    return;
+                                  }
+
+                                  const rawProject = project as any; // Para acceder a posibles variaciones de ID
+                                  const projectId = project.IDProject ?? 
+                                                 rawProject.idproject ?? 
+                                                 rawProject.id ?? 
+                                                 rawProject.projectId;
+
+                                  if (!projectId) {
+                                    console.error('🚫 No se encontró un ID válido para el proyecto:', project);
+                                    window.alert('Error: ID del proyecto no encontrado');
+                                    return;
+                                  }
+
+                                  // Si llegamos aquí, el proyecto es válido
+                                  const validProject: Project = {
+                                    ...project,
+                                    IDProject: projectId
+                                  };
+                                  
+                                  handleJoinProject(validProject);
+                                }}
+                                disabled={joiningProjectId === project?.IDProject}
                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200 disabled:opacity-50"
                               >
-                                {joiningProjectId === project.IDProject ? 'Uniendo...' : 'Unirse'}
+                                {joiningProjectId === project?.IDProject ? 'Uniendo...' : 'Unirse'}
                               </button>
                             </div>
                           </div>

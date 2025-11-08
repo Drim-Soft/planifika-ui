@@ -41,6 +41,7 @@ export interface Project {
   percentageBudgetExecution?: number;
   IDMethodologyRef?: number;
   IDProjectStatusRef?: number;
+  userRoleId?: number;  // Added for user's role in project
 }
 
 export interface CreateProjectRequest {
