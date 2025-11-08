@@ -51,6 +51,7 @@ export interface CreateProjectRequest {
   budget?: number;
   methodologyName?: string | null;
   statusName?: string | null;
+  IDProjectStatus?: number; // Adding the status ID
 }
 
 

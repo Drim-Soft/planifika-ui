@@ -68,6 +68,10 @@ export default function AcademicDashboard() {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [editProject, setEditProject] = useState<any>(null);
   const [deleteProject, setDeleteProject] = useState<any>(null);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joiningProjectId, setJoiningProjectId] = useState<number | null>(null);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [isLoadingAllProjects, setIsLoadingAllProjects] = useState(false);
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -177,7 +181,95 @@ setUserProjects(projectsWithRoles);
     });
   }, [userProjects]);
 
+  // Cargar todos los proyectos disponibles
+  useEffect(() => {
+    const loadAll = async () => {
+      try {
+        setIsLoadingAllProjects(true);
+        const projects = await projectService.getAllProjects();
+        setAllProjects(projects);
+      } catch (err) {
+        console.error('Error loading all projects:', err);
+      } finally {
+        setIsLoadingAllProjects(false);
+      }
+    };
 
+    if (isAuthenticated) loadAll();
+  }, [isAuthenticated]);
+
+  const refreshUserProjects = async () => {
+    if (!user) return;
+    try {
+      setIsLoadingProjects(true);
+      const projects = await projectService.getUserProjects(user.id);
+      setUserProjects(projects);
+    } catch (err) {
+      console.error('Error refreshing user projects:', err);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
+  // Manejar unirse a un proyecto
+  const handleJoinProject = async (project: Project) => {
+    if (!user || !project.IDProject) return;
+
+    try {
+      setJoiningProjectId(project.IDProject);
+
+      // Intentar obtener el id de la metodología
+      const methodologyId = project.methodology?.IDMethodology ?? (project as any).IDMethodologyRef;
+
+      // Obtener roles disponibles por metodología
+      let roles: any[] = [];
+      if (methodologyId) {
+        try {
+          roles = await projectService.getRolesByMethodology(Number(methodologyId));
+        } catch (err) {
+          console.warn('No se pudieron obtener roles por metodología:', err);
+        }
+      }
+
+      // También intentar obtener roles embebidos en el objeto de proyecto
+      if (!roles || roles.length === 0) {
+        roles = project.methodology?.roles || [];
+      }
+
+      // Buscar rol adecuado para estudiante/colaborador
+      const preferNames = ['estudiante', 'student', 'colaborador', 'collaborator'];
+      let chosenRole = roles.find((r: any) => {
+        const name = (r.name || r.nombre || '').toString().toLowerCase();
+        return preferNames.some(p => name.includes(p));
+      });
+
+      if (!chosenRole && roles.length > 0) {
+        // Fallback al primer rol
+        chosenRole = roles[0];
+      }
+
+      if (!chosenRole || !chosenRole.IDRole) {
+        window.alert('No se pudo determinar un rol para unirse a este proyecto. Contacta al administrador.');
+        return;
+      }
+
+      await projectService.assignUserToProject(Number(project.IDProject), user.id, Number(chosenRole.IDRole));
+
+      window.alert(`Te has unido al proyecto "${project.name}" correctamente.`);
+
+      // Refrescar proyectos del usuario
+      await refreshUserProjects();
+      // también refrescar lista global
+      const all = await projectService.getAllProjects();
+      setAllProjects(all);
+
+    } catch (err) {
+      console.error('Error joining project:', err);
+      window.alert(err instanceof Error ? err.message : 'Error al unirse al proyecto');
+    } finally {
+      setJoiningProjectId(null);
+    }
+  };
 
   // Navegar a crear nuevo proyecto
   const handleCreateNewProject = () => {
@@ -326,12 +418,20 @@ setUserProjects(projectsWithRoles);
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-2xl font-bold text-gray-900">Mis Proyectos Académicos</h3>
-            <button 
-              onClick={handleCreateNewProject}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-            >
-              Nuevo Proyecto
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowJoinModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                Unirse a un proyecto
+              </button>
+              <button 
+                onClick={handleCreateNewProject}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                Nuevo Proyecto
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -447,6 +547,66 @@ setUserProjects(projectsWithRoles);
           </div>
         </div>
 
+        {/* Modal: lista de proyectos para unirse */}
+        {showJoinModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black opacity-50" onClick={() => setShowJoinModal(false)} />
+            <div className="relative z-10 w-full max-w-5xl mx-4">
+              <div className="bg-white rounded-lg shadow-lg p-6 max-h-[80vh] overflow-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-xl font-semibold">Proyectos Disponibles</h4>
+                  <button onClick={() => setShowJoinModal(false)} className="text-gray-500 hover:text-gray-800">Cerrar ×</button>
+                </div>
+
+                {isLoadingAllProjects ? (
+                  <div className="text-center py-8 text-gray-500">Cargando proyectos disponibles...</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {allProjects
+                      .filter(p => !userProjects.some(up => up.IDProject === p.IDProject))
+                      .map((project) => (
+                        <div key={project.IDProject} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+                          <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                              <div className="flex-1">
+                                <h4 className="text-lg font-semibold text-gray-900 mb-1">{project.name}</h4>
+                                <p className="text-sm text-gray-600 mb-2">{project.methodology?.name} - {project.projectStatus?.name}</p>
+                              </div>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.projectStatus?.name || '')}`}>
+                                {project.projectStatus?.name}
+                              </span>
+                            </div>
+
+                            <p className="text-gray-700 text-sm mb-4 line-clamp-2">{project.description}</p>
+
+                            <div className="mb-4">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-sm font-medium text-gray-700">Progreso</span>
+                                <span className="text-sm text-gray-600">{project.percentageProgress || 0}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div className={`${getProgressColor(project.percentageProgress || 0)} h-2 rounded-full`} style={{ width: `${project.percentageProgress || 0}%` }}></div>
+                              </div>
+                            </div>
+
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleJoinProject(project)}
+                                disabled={joiningProjectId === project.IDProject}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200 disabled:opacity-50"
+                              >
+                                {joiningProjectId === project.IDProject ? 'Uniendo...' : 'Unirse'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
             {/* =========================
                   Modales de Proyecto

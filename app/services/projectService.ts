@@ -93,6 +93,7 @@ class ProjectService {
       description: projectData.description,
       methodologyName: projectData.methodologyName,
       statusName: projectData.statusName,
+      IDProjectStatus: projectData.IDProjectStatus, // Adding the status ID
       startDate: projectData.startDate,
       endDate: projectData.endDate,
       userId: userId  // 👈 aquí aseguramos que se envíe al backend

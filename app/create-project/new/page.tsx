@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { getRoleLabel } from "../../utils/roleUtils";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import CreateProjectForm from "../../components/CreateProjectForm";
 import { projectService } from "../../services/projectService";
 import { Methodology, ProjectStatus, ProjectFormData } from "../../types/project";
 
@@ -174,7 +175,7 @@ const handleCreateProject = async () => {
       endDate: formData.endDate,
       budget: formData.budget ? Number(formData.budget) : undefined,
       methodologyName: formData.methodology, 
-      statusName: projectStatuses.find(s => s.IDProjectStatus == Number(formData.status))?.name
+      statusName: formData.status === "1" ? "En Progreso" : formData.status === "2" ? "Completado" : formData.status === "3" ? "Pendiente" : projectStatuses.find(s => s.IDProjectStatus === Number(formData.status))?.name
     };
 
     console.log("Payload final que se envía:", projectData);
@@ -296,8 +297,14 @@ const handleCreateProject = async () => {
               </div>
             )}
 
-            {/* Formulario de creación de proyecto */}
-            <form onSubmit={(e) => { e.preventDefault(); handleCreateProject(); }} className="space-y-6">
+            {/* Formulario de creación de proyecto (reutilizable) */}
+            <CreateProjectForm
+              user={user}
+              onCreated={() => {
+                // comportamiento previo: redirigir al listado después de un pequeño delay
+                setTimeout(() => router.push('/create-project'), 2000);
+              }}
+            />
               
               {/* Nombre del proyecto */}
               <div>
@@ -516,7 +523,7 @@ const handleCreateProject = async () => {
                 </button>
               </div>
 
-            </form>
+            
 
           </div>
         </div>
