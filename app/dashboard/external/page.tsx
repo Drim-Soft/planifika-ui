@@ -138,7 +138,31 @@ export default function ExternalDashboard() {
       try {
         setIsLoadingAllProjects(true);
         const projects = await projectService.getAllProjects();
-        setAllProjects(projects);
+        console.log('Proyectos disponibles sin normalizar:', projects);
+        
+        // Normalizar los proyectos para asegurar consistencia de IDs
+        const normalizedProjects = projects.map((p: any) => ({
+          ...p,
+          IDProject: p.IDProject ?? p.idproject ?? p.id ?? p.projectId,
+          IDMethodologyRef: p.IDMethodologyRef ?? p.idmethodologyRef,
+          IDProjectStatusRef: p.IDProjectStatusRef ?? p.idprojectStatusRef,
+          methodology: p.methodology
+            ? {
+                ...p.methodology,
+                IDMethodology: p.methodology.IDMethodology ?? p.methodology.idmethodology,
+              }
+            : null,
+          projectStatus: p.projectStatus
+            ? {
+                ...p.projectStatus,
+                IDProjectStatus:
+                  p.projectStatus.IDProjectStatus ?? p.projectStatus.idprojectStatus,
+              }
+            : null,
+        }));
+
+        console.log('Proyectos disponibles normalizados:', normalizedProjects);
+        setAllProjects(normalizedProjects);
       } catch (err) {
         console.error('Error loading all projects:', err);
       } finally {
@@ -154,7 +178,50 @@ export default function ExternalDashboard() {
     try {
       setIsLoadingProjects(true);
       const projects = await projectService.getUserProjects(user.id);
-      setUserProjects(projects);
+      // Normalizar igual que en el useEffect principal
+      const normalized = projects.map((p: any) => ({
+        ...p,
+        IDProject: p.IDProject ?? p.idproject,
+        IDMethodologyRef: p.IDMethodologyRef ?? p.idmethodologyRef,
+        IDProjectStatusRef: p.IDProjectStatusRef ?? p.idprojectStatusRef,
+        methodology: p.methodology
+          ? {
+              ...p.methodology,
+              IDMethodology: p.methodology.IDMethodology ?? p.methodology.idmethodology,
+            }
+          : null,
+        projectStatus: p.projectStatus
+          ? {
+              ...p.projectStatus,
+              IDProjectStatus:
+                p.projectStatus.IDProjectStatus ?? p.projectStatus.idprojectStatus,
+            }
+          : null,
+      }));
+
+      const filteredProjects = normalized.filter(
+        (p) => p.projectStatus?.name?.toLowerCase() !== "eliminado"
+      );
+
+      const uniqueProjects = filteredProjects.filter(
+        (project, index, self) =>
+          index === self.findIndex((p) => p.IDProject === project.IDProject)
+      );
+
+      const projectsWithRoles = await Promise.all(
+        uniqueProjects.map(async (proj) => {
+          try {
+            const usersInProject = await projectService.getUsersInProject(proj.IDProject);
+            const myUser = usersInProject.find((u: any) => u.iduser === user.id);
+            return { ...proj, userRoleId: myUser?.idrole ?? null };
+          } catch (err) {
+            console.warn(`No se pudo cargar roles para proyecto ${proj.IDProject}`, err);
+            return { ...proj, userRoleId: null };
+          }
+        })
+      );
+
+      setUserProjects(projectsWithRoles);
     } catch (err) {
       console.error('Error refreshing user projects:', err);
     } finally {
@@ -171,48 +238,132 @@ export default function ExternalDashboard() {
 
       // Intentar obtener el id de la metodología
       const methodologyId = project.methodology?.IDMethodology ?? (project as any).IDMethodologyRef;
+      console.log('🎯 ID de metodología encontrado:', methodologyId);
 
       // Obtener roles disponibles por metodología
       let roles: any[] = [];
       if (methodologyId) {
         try {
+          console.log('📜 Buscando roles para metodología ID:', methodologyId);
           roles = await projectService.getRolesByMethodology(Number(methodologyId));
+          console.log('📜 Roles obtenidos de la metodología (raw):', JSON.stringify(roles, null, 2));
+          
+          // Normalizar roles desde la API
+          roles = roles.map((role: any) => ({
+            ...role,
+            IDRole: role.IDRole || role.idrole || role.id || role.roleId,
+            name: role.name || role.nombre || role.roleName || role.rolname
+          }));
+          console.log('📜 Roles normalizados:', roles);
         } catch (err) {
-          console.warn('No se pudieron obtener roles por metodología:', err);
+          console.warn('❌ No se pudieron obtener roles por metodología:', err);
         }
       }
 
       // También intentar obtener roles embebidos en el objeto de proyecto
       if (!roles || roles.length === 0) {
-        roles = project.methodology?.roles || [];
+        console.log('🔍 Buscando roles embebidos en el proyecto:', project.methodology?.roles);
+        const embeddedRoles = project.methodology?.roles || [];
+        // Normalizar roles embebidos
+        roles = embeddedRoles.map((role: any) => ({
+          ...role,
+          IDRole: role.IDRole || role.idrole || role.id || role.roleId,
+          name: role.name || role.nombre || role.roleName || role.rolname
+        }));
+        console.log('🔍 Roles embebidos normalizados:', roles);
       }
 
-      // Buscar rol adecuado para estudiante/colaborador
-      const preferNames = ['estudiante', 'student', 'colaborador', 'collaborator'];
-      let chosenRole = roles.find((r: any) => {
-        const name = (r.name || r.nombre || '').toString().toLowerCase();
-        return preferNames.some(p => name.includes(p));
-      });
+      console.log('📋 Lista completa de roles disponibles:', roles);
 
-      if (!chosenRole && roles.length > 0) {
-        // Fallback al primer rol
-        chosenRole = roles[0];
-      }
-
-      if (!chosenRole || !chosenRole.IDRole) {
-        window.alert('No se pudo determinar un rol para unirse a este proyecto. Contacta al administrador.');
+      if (!roles || roles.length === 0) {
+        console.error('❌ No se encontraron roles disponibles');
+        window.alert('No hay roles disponibles para este proyecto. Contacta al administrador.');
         return;
       }
 
-      await projectService.assignUserToProject(Number(project.IDProject), user.id, Number(chosenRole.IDRole));
+      // Buscar rol adecuado para usuario externo (invitado, colaborador, externo, estudiante, etc.)
+      const preferNames = ['invitado', 'guest', 'externo', 'external', 'colaborador', 'collaborator', 'estudiante', 'student'];
+      let chosenRole = roles.find((r: any) => {
+        if (!r || !r.name) return false;
+        const name = r.name.toString().toLowerCase();
+        return preferNames.some(p => name.includes(p));
+      });
+
+      // Si no encontramos un rol específico, intentar buscar por ID específico para usuarios externos
+      if (!chosenRole) {
+        chosenRole = roles.find(r => {
+          const roleId = r.IDRole || r.idrole || r.id || r.roleId;
+          // IDs comunes para roles externos/estudiantes
+          return [20, 21, 22, 23, 24, 25].includes(Number(roleId));
+        });
+      }
+
+      // Si aún no hay rol, buscar el primer rol que NO sea admin ni owner
+      if (!chosenRole && roles.length > 0) {
+        chosenRole = roles.find((r: any) => {
+          if (!r || !r.name) return false;
+          const name = r.name.toString().toLowerCase();
+          return !name.includes('admin') && !name.includes('owner') && !name.includes('propietario') && !name.includes('dueño');
+        }) || roles[0];
+      }
+
+      // Verificar el rol seleccionado
+      if (!chosenRole) {
+        console.error('❌ No se encontró ningún rol:', {
+          metodologiaId: methodologyId,
+          rolesDisponibles: roles,
+          proyecto: project
+        });
+        window.alert('No se encontraron roles disponibles para este proyecto. Contacta al administrador.');
+        return;
+      }
+
+      // Verificar y normalizar el ID del rol
+      let roleId = chosenRole.IDRole;
+      if (!roleId) {
+        // Intentar obtener el ID de otras propiedades posibles
+        roleId = chosenRole.idrole || chosenRole.id || chosenRole.roleId;
+        if (!roleId) {
+          console.error('❌ Rol seleccionado no tiene ID válido:', {
+            rol: chosenRole,
+            propiedades: Object.keys(chosenRole)
+          });
+          window.alert('Error al procesar el rol seleccionado. Contacta al administrador.');
+          return;
+        }
+        // Si encontramos el ID en una propiedad alternativa, normalizamos el objeto
+        chosenRole.IDRole = roleId;
+      }
+
+      // Verificación final del rol
+      console.log('🎯 Rol final seleccionado:', {
+        id: roleId,
+        nombre: chosenRole.name,
+        propiedades: Object.keys(chosenRole),
+        rolCompleto: chosenRole
+      });
+
+      console.log('✅ Rol seleccionado:', { 
+        nombre: chosenRole.name || chosenRole.nombre,
+        id: roleId,
+        rolCompleto: chosenRole
+      });
+
+      console.log('🚀 Intentando unir al proyecto con:', {
+        projectId: project.IDProject,
+        userId: user.id,
+        roleId: roleId
+      });
+
+      await projectService.assignUserToProject(Number(project.IDProject), user.id, Number(roleId));
 
       window.alert(`Te has unido al proyecto "${project.name}" correctamente.`);
 
-      // Refrescar proyectos del usuario
-      await refreshUserProjects();
-      // también refrescar lista global
-      const all = await projectService.getAllProjects();
-      setAllProjects(all);
+      // Cerrar el modal
+      setShowJoinModal(false);
+
+      // Recargar la página para actualizar todos los datos
+      window.location.reload();
 
     } catch (err) {
       console.error('Error joining project:', err);
@@ -388,11 +539,49 @@ export default function ExternalDashboard() {
 
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleJoinProject(project)}
-                                disabled={joiningProjectId === project.IDProject}
+                                onClick={() => {
+                                  // Validación detallada del proyecto
+                                  console.log('🔵 Validación pre-unión:', { 
+                                    project: project,
+                                    projectExists: !!project,
+                                    projectType: typeof project,
+                                    projectKeys: Object.keys(project || {}),
+                                    projectId: project?.IDProject,
+                                    projectName: project?.name,
+                                    rawProject: JSON.stringify(project)
+                                  });
+                                  
+                                  // Verificar que tenemos todos los campos necesarios
+                                  if (!project || typeof project !== 'object') {
+                                    console.error('🚫 Proyecto no es un objeto válido:', project);
+                                    window.alert('Error: Datos del proyecto inválidos');
+                                    return;
+                                  }
+
+                                  const rawProject = project as any; // Para acceder a posibles variaciones de ID
+                                  const projectId = project.IDProject ?? 
+                                                 rawProject.idproject ?? 
+                                                 rawProject.id ?? 
+                                                 rawProject.projectId;
+
+                                  if (!projectId) {
+                                    console.error('🚫 No se encontró un ID válido para el proyecto:', project);
+                                    window.alert('Error: ID del proyecto no encontrado');
+                                    return;
+                                  }
+
+                                  // Si llegamos aquí, el proyecto es válido
+                                  const validProject: Project = {
+                                    ...project,
+                                    IDProject: projectId
+                                  };
+                                  
+                                  handleJoinProject(validProject);
+                                }}
+                                disabled={joiningProjectId === project?.IDProject}
                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded transition-colors duration-200 disabled:opacity-50"
                               >
-                                {joiningProjectId === project.IDProject ? 'Uniendo...' : 'Unirse'}
+                                {joiningProjectId === project?.IDProject ? 'Uniendo...' : 'Unirse'}
                               </button>
                             </div>
                           </div>
@@ -514,7 +703,8 @@ export default function ExternalDashboard() {
                     >
                       Ver Detalles
                     </button>
-                    {hasAdminProjectRole(user?.role, (project as any)?.userRoleId) && (
+                    {/* Solo mostrar el botón Editar si el usuario es dueño o tiene rol admin en el proyecto */}
+                    {hasAdminProjectRole(user?.role, project?.userRoleId) && (
                       <button
                         type="button"
                         onClick={() => {
