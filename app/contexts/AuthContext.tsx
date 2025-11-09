@@ -6,6 +6,20 @@ import { authService } from '../services/authService';
 import { SignupRequest, SignupResponse, LoginRequest, LoginResponse, User, UserRole, UserInfoResponse, AuthError, AuthContextType } from '../types/auth';
 import { getDefaultRouteForRole } from '../utils/roleUtils';
 
+// Helper pequeño para formatear un email como nombre si backend no devuelve name
+function formatEmailToName(email?: string | null): string {
+  if (!email) return '';
+  try {
+    const local = email.split('@')[0];
+    // Reemplazar puntos/underscores por espacios y capitalizar palabras
+    const parts = local.split(/\.|_|-/).filter(Boolean);
+    const name = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+    return name;
+  } catch {
+    return email;
+  }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {

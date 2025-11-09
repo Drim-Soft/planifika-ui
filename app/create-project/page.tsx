@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 import { UserRole } from "../types/auth";
-import { getRoleLabel } from "../utils/roleUtils";
+import { getRoleLabel, hasAdminProjectRole } from "../utils/roleUtils";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { projectService } from "../services/projectService";
 import { Project } from "../types/project";
+import ProjectDetailsModal from "../components/ProjectDetailsModal";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
+import ProjectEditModal from "../dashboard/academic/components/ProjectEditModal";
 
 export default function CreateProject() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
@@ -16,16 +19,65 @@ export default function CreateProject() {
   const [isLoading, setIsLoading] = useState(false);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [editProject, setEditProject] = useState<any>(null);
+  const [deleteProject, setDeleteProject] = useState<any>(null);
 
   // Cargar proyectos del usuario
   useEffect(() => {
     const loadUserProjects = async () => {
       if (!user) return;
-      
+
       try {
         setIsLoadingProjects(true);
+
         const projects = await projectService.getUserProjects(user.id);
-        setUserProjects(projects);
+
+        // Normalizar campos para asegurar compatibilidad con los modales
+        const normalized = projects.map((p: any) => ({
+          ...p,
+          IDProject: p.IDProject ?? p.idproject,
+          IDMethodologyRef: p.IDMethodologyRef ?? p.idmethodologyRef,
+          IDProjectStatusRef: p.IDProjectStatusRef ?? p.idprojectStatusRef,
+          methodology: p.methodology
+            ? {
+                ...p.methodology,
+                IDMethodology: p.methodology.IDMethodology ?? p.methodology.idmethodology,
+              }
+            : null,
+          projectStatus: p.projectStatus
+            ? {
+                ...p.projectStatus,
+                IDProjectStatus:
+                  p.projectStatus.IDProjectStatus ?? p.projectStatus.idprojectStatus,
+              }
+            : null,
+        }));
+
+        const filteredProjects = normalized.filter(
+          (p) => p.projectStatus?.name?.toLowerCase() !== "eliminado"
+        );
+
+        const uniqueProjects = filteredProjects.filter(
+          (project, index, self) =>
+            index === self.findIndex((p) => p.IDProject === project.IDProject)
+        );
+
+        // Cargar rol real del usuario en cada proyecto (para permisos)
+        const projectsWithRoles = await Promise.all(
+          uniqueProjects.map(async (proj) => {
+            try {
+              const usersInProject = await projectService.getUsersInProject(proj.IDProject);
+              const myUser = usersInProject.find((u: any) => u.iduser === user.id);
+              return { ...proj, userRoleId: myUser?.idrole ?? null };
+            } catch (err) {
+              console.warn(`No se pudo cargar roles para proyecto ${proj.IDProject}`, err);
+              return { ...proj, userRoleId: null };
+            }
+          })
+        );
+
+        setUserProjects(projectsWithRoles);
       } catch (err) {
         console.error('Error loading user projects:', err);
       } finally {
@@ -187,10 +239,40 @@ export default function CreateProject() {
                               )}
                             </div>
                           </div>
-                          <div className="ml-4">
+                          <div className="ml-4 flex flex-col gap-2 items-end">
                             <span className="text-sm text-gray-400">
                               Progreso: {project.percentageProgress || 0}%
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                console.log('Ver Detalles click (external):', project);
+                                setSelectedProject(project);
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors duration-200 mt-2"
+                            >
+                              Ver Detalles
+                            </button>
+                            {hasAdminProjectRole(user?.role, (project as any)?.userRoleId) && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    console.log('Editar click (external):', project);
+                                    setEditProject(project);
+                                  }}
+                                  className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors duration-200"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => setDeleteProject(project)}
+                                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors duration-200"
+                                >
+                                  Eliminar
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -200,6 +282,43 @@ export default function CreateProject() {
               </div>
 
             </div>
+
+            {/* Modales de Proyecto */}
+            {selectedProject && (
+              <ProjectDetailsModal
+                project={selectedProject}
+                user={user}
+                onClose={() => setSelectedProject(null)}
+              />
+            )}
+
+            {editProject && (
+              <ProjectEditModal
+                project={editProject}
+                onClose={() => {
+                  setEditProject(null);
+                  projectService.getUserProjects(user.id).then(setUserProjects);
+                }}
+              />
+            )}
+
+            {deleteProject && (
+              <ConfirmDeleteModal
+                project={deleteProject}
+                onClose={() => setDeleteProject(null)}
+                onConfirm={() => {
+                  projectService
+                    .deleteProject(deleteProject.IDProject ?? deleteProject.idproject)
+                    .then(() => {
+                      setUserProjects(prev =>
+                        prev.filter(p => p.IDProject !== deleteProject.IDProject)
+                      );
+                      setDeleteProject(null);
+                    })
+                    .catch(console.error);
+                }}
+              />
+            )}
 
             {/* Enlaces adicionales */}
             <div className="mt-8 text-center">

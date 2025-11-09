@@ -17,6 +17,13 @@ class ProjectService {
     ...options,
   };
 
+  console.log('📡 Haciendo petición:', {
+    url,
+    method: options.method,
+    headers: config.headers,
+    body: options.body
+  });
+
   try {
     const response = await fetch(url, config);
 
@@ -93,6 +100,7 @@ class ProjectService {
       description: projectData.description,
       methodologyName: projectData.methodologyName,
       statusName: projectData.statusName,
+      IDProjectStatus: projectData.IDProjectStatus, // Adding the status ID
       startDate: projectData.startDate,
       endDate: projectData.endDate,
       userId: userId  // 👈 aquí aseguramos que se envíe al backend
@@ -146,6 +154,37 @@ class ProjectService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ IDUser: idUser, IDRole: idRole }),
     });
+  }
+
+  // Unirse a un proyecto
+  async joinProject(projectId: number, userId: number): Promise<string> {
+    const endpoint = `/projects/${projectId}/join`;
+    const url = `${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}${endpoint}`;
+    
+    console.log('🚀 Intentando unirse al proyecto:', { 
+      projectId, 
+      userId,
+      url,
+      baseUrl: API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL 
+    });
+
+    try {
+      const response = await this.request<string>(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ IDUser: userId }),
+      });
+      console.log('✅ Respuesta del servidor:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Error en joinProject:', { 
+        error, 
+        url, 
+        projectId, 
+        userId 
+      });
+      throw error;
+    }
   }
 
 }
