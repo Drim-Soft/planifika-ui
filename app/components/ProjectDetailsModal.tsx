@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hasAdminProjectRole } from "@/app/utils/roleUtils";
+import { UserRole } from "@/app/types/auth";
 import { phaseService } from "../services/phaseService";
 import { projectService } from "../services/projectService";
 import { Phase } from "@/app/types/phase";
@@ -12,8 +13,9 @@ import { toast } from "react-hot-toast";
 export default function ProjectDetailsModal({ project, onClose, user }: any) {
   if (!project) return null;
 
-  // ✅ Verificar permisos reales de admin basados en el rol del usuario en ese proyecto
-  const isAdmin = hasAdminProjectRole(user?.role, project?.userRoleId);
+  // ✅ Superusuario siempre tiene acceso completo
+  // ✅ Para otros usuarios, verificar permisos reales de admin basados en el rol del usuario en ese proyecto
+  const isAdmin = user?.role === UserRole.SUPERUSER || hasAdminProjectRole(user?.role, project?.userRoleId);
 
   // Estados para fases
   const [phases, setPhases] = useState<Phase[]>([]);

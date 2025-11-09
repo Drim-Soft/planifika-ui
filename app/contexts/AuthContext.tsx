@@ -186,11 +186,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('Raw userRoleValue from backend:', userRoleValue);
       console.log('Type of userRoleValue:', typeof userRoleValue);
       
-      // SOLUCIÓN TEMPORAL: Si no tenemos userType del backend, usar un valor por defecto
-      // TODO: Esto debe ser corregido en el backend - el endpoint /auth/me debe devolver userType
+      // Mapear userType del backend a UserRole enum
       let finalRole: UserRole;
       if (userRoleValue !== undefined && userRoleValue !== null) {
-        finalRole = userRoleValue as UserRole;
+        const roleNumber = Number(userRoleValue);
+        // Mapear explícitamente los valores conocidos
+        if (roleNumber === 1) {
+          finalRole = UserRole.ADMIN;
+        } else if (roleNumber === 2) {
+          finalRole = UserRole.EXTERNAL;
+        } else if (roleNumber === 3) {
+          finalRole = UserRole.COLLABORATOR;
+        } else if (roleNumber === 4) {
+          finalRole = UserRole.SUPERUSER;
+        } else {
+          // Si es un valor desconocido, intentar cast directo
+          finalRole = roleNumber as UserRole;
+        }
       } else {
         // TEMPORAL: Asumir EXTERNAL (2) por defecto para usuarios que no son admin
         // Esto debería ser reemplazado por una consulta correcta al backend
@@ -281,7 +293,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       let finalRole: UserRole;
       if (userRoleValue !== undefined && userRoleValue !== null) {
-        finalRole = userRoleValue as UserRole;
+        const roleNumber = Number(userRoleValue);
+        // Mapear explícitamente los valores conocidos
+        if (roleNumber === 1) {
+          finalRole = UserRole.ADMIN;
+        } else if (roleNumber === 2) {
+          finalRole = UserRole.EXTERNAL;
+        } else if (roleNumber === 3) {
+          finalRole = UserRole.COLLABORATOR;
+        } else if (roleNumber === 4) {
+          finalRole = UserRole.SUPERUSER;
+        } else {
+          // Si es un valor desconocido, intentar cast directo
+          finalRole = roleNumber as UserRole;
+        }
       } else {
         // Fallback para estudiantes externos
         finalRole = UserRole.COLLABORATOR;

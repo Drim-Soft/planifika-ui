@@ -101,7 +101,8 @@ export interface User {
 export enum UserRole {
   ADMIN = 1,
   EXTERNAL = 2,
-  COLLABORATOR = 3 // Estudiante/Colaborador
+  COLLABORATOR = 3, // Estudiante/Colaborador
+  SUPERUSER = 4 // Superusuario con acceso completo
 }
 
 export enum UserStatus {
