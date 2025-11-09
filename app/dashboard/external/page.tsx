@@ -26,6 +26,8 @@ export default function ExternalDashboard() {
   const [joiningProjectId, setJoiningProjectId] = useState<number | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [joinSearchTerm, setJoinSearchTerm] = useState("");
   const [stats, setStats] = useState({
     totalProjects: 0,
     activeProjects: 0,
@@ -479,6 +481,13 @@ export default function ExternalDashboard() {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-2xl font-bold text-gray-900">Mis Proyectos Externos</h3>
             <div className="flex items-center gap-3">
+              <input
+                type="text"
+                placeholder="Buscar proyecto..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <button
                 onClick={() => setShowJoinModal(true)}
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
@@ -506,12 +515,27 @@ export default function ExternalDashboard() {
                   <button onClick={() => setShowJoinModal(false)} className="text-gray-500 hover:text-gray-800">Cerrar ×</button>
                 </div>
 
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Buscar proyecto disponible..."
+                    value={joinSearchTerm}
+                    onChange={(e) => setJoinSearchTerm(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
                 {isLoadingAllProjects ? (
                   <div className="text-center py-8 text-gray-500">Cargando proyectos disponibles...</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {allProjects
                       .filter(p => !userProjects.some(up => up.IDProject === p.IDProject))
+                      .filter(p => p.projectStatus?.name?.toLowerCase() !== "eliminado")
+                      .filter(project =>
+                        project.name &&
+                        project.name.toLowerCase().includes(joinSearchTerm.trim().toLowerCase())
+                      )
                       .map((project) => (
                         <div key={project.IDProject} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
                           <div className="p-6">
@@ -626,7 +650,12 @@ export default function ExternalDashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {userProjects.map((project) => (
+            {userProjects
+              .filter(project =>
+                project.name &&
+                project.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+              )
+              .map((project) => (
               <div key={project.IDProject} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
                 <div className="p-6">
                   {/* Header de la tarjeta */}
