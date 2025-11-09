@@ -12,8 +12,8 @@ export default function Home() {
   // Redirigir usuarios autenticados según su rol
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      if (user.role === UserRole.ADMIN) {
-        router.push('/create-organization');
+      if (user.role === UserRole.SUPERUSER) {
+        router.push('/dashboard/admin');
       } else {
         router.push('/dashboard');
       }

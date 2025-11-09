@@ -38,6 +38,9 @@ export default function Dashboard() {
         case UserRole.COLLABORATOR:
           router.push('/dashboard/academic');
           break;
+        case UserRole.SUPERUSER:
+          router.push('/dashboard/admin');
+          break;
         default:
           // Mantener en dashboard principal para otros roles
           break;

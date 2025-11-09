@@ -5,12 +5,14 @@ export const ROLE_LABELS = {
   [UserRole.ADMIN]: 'Administrador',
   [UserRole.EXTERNAL]: 'Usuario Externo',
   [UserRole.COLLABORATOR]: 'Estudiante',
+  [UserRole.SUPERUSER]: 'Superusuario',
 } as const;
 
 export const ROLE_DESCRIPTIONS = {
   [UserRole.ADMIN]: 'Puede gestionar usuarios, proyectos y organizaciones',
   [UserRole.EXTERNAL]: 'Puede crear y gestionar sus propios proyectos',
   [UserRole.COLLABORATOR]: 'Puede ver y participar en proyectos académicos',
+  [UserRole.SUPERUSER]: 'Acceso completo a proyectos, fases y tareas',
 } as const;
 
 export const ROLE_PERMISSIONS = {
@@ -32,6 +34,13 @@ export const ROLE_PERMISSIONS = {
     'view_academic_projects',
     'participate_in_projects',
     'view_academic_dashboard',
+  ],
+  [UserRole.SUPERUSER]: [
+    'manage_all_projects',
+    'manage_all_phases',
+    'manage_all_tasks',
+    'view_all_dashboards',
+    'full_crud_access',
   ],
 } as const;
 
@@ -64,6 +73,10 @@ export function isCollaborator(role: UserRole): boolean {
   return role === UserRole.COLLABORATOR;
 }
 
+export function isSuperuser(role: UserRole): boolean {
+  return role === UserRole.SUPERUSER;
+}
+
 export function getRoleFromUrlParam(roleParam: string | null): UserRole | null {
   if (!roleParam) return null;
   
@@ -72,6 +85,7 @@ export function getRoleFromUrlParam(roleParam: string | null): UserRole | null {
   if (roleNumber === UserRole.ADMIN) return UserRole.ADMIN;
   if (roleNumber === UserRole.EXTERNAL) return UserRole.EXTERNAL;
   if (roleNumber === UserRole.COLLABORATOR) return UserRole.COLLABORATOR;
+  if (roleNumber === UserRole.SUPERUSER) return UserRole.SUPERUSER;
   
   return null;
 }
@@ -88,6 +102,8 @@ export function getDefaultRouteForRole(role: UserRole): string {
       return '/dashboard/external';
     case UserRole.COLLABORATOR:
       return '/dashboard/academic';
+    case UserRole.SUPERUSER:
+      return '/dashboard/admin';
     default:
       return '/dashboard';
   }
