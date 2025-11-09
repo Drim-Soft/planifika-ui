@@ -22,8 +22,9 @@ export default function ProjectEditModal({ project, onClose }: any) {
   const [roles, setRoles] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [assignedUsers, setAssignedUsers] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<number | null>(null);
-  const [selectedRole, setSelectedRole] = useState<number | null>(null);
+  const [userNames, setUserNames] = useState<Map<number, string>>(new Map());
+  const [selectedUser, setSelectedUser] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string>("");
   const [editingUserRole, setEditingUserRole] = useState<number | null>(null);
   const [newRoleForUser, setNewRoleForUser] = useState<number | null>(null);
   const [updatingRole, setUpdatingRole] = useState<number | null>(null);
@@ -73,6 +74,59 @@ export default function ProjectEditModal({ project, onClose }: any) {
       });
   }, [project]);
 
+  // 🔹 Helper para normalizar ID de usuario
+  const normalizeUserId = (user: any): number | null => {
+    return user?.iduser || user?.IDUser || user?.id || user?.ID || null;
+  };
+
+  // 🔹 Cargar nombres de usuarios que no tienen nombre
+  useEffect(() => {
+    const loadUserNames = async () => {
+      if (assignedUsers.length === 0) return;
+
+      const userIdsToLoad: number[] = [];
+
+      // Identificar usuarios que necesitan cargar su nombre
+      assignedUsers.forEach((user) => {
+        const userId = normalizeUserId(user);
+        // Solo cargar si no tiene nombre y el userId es válido
+        if (userId && !user.name) {
+          userIdsToLoad.push(userId);
+        }
+      });
+
+      // Cargar nombres de usuarios que no los tienen
+      if (userIdsToLoad.length > 0) {
+        const loadPromises = userIdsToLoad.map(async (userId) => {
+          try {
+            const userProfile = await userService.getUserById(userId);
+            const userName = userProfile?.name || `Usuario ${userId}`;
+            return { userId, userName };
+          } catch (error) {
+            console.error(`Error loading user ${userId}:`, error);
+            return { userId, userName: `Usuario ${userId}` };
+          }
+        });
+
+        const loadedNames = await Promise.all(loadPromises);
+
+        // Actualizar el estado con los nombres cargados
+        setUserNames((prev) => {
+          const combined = new Map(prev);
+          loadedNames.forEach(({ userId, userName }) => {
+            // Solo actualizar si no existe ya en el mapa
+            if (!combined.has(userId)) {
+              combined.set(userId, userName);
+            }
+          });
+          return combined;
+        });
+      }
+    };
+
+    loadUserNames();
+  }, [assignedUsers]);
+
   // 🔹 Cargar usuarios del proyecto (ya asignados)
   useEffect(() => {
     if (!projectId) return;
@@ -80,7 +134,21 @@ export default function ProjectEditModal({ project, onClose }: any) {
       .getUsersInProject(projectId)
       .then((data) => {
         console.log("🔍 Datos de usuarios asignados:", data);
-        setAssignedUsers(data); // Los usuarios del proyecto son los ya asignados
+        // Normalizar los datos de usuarios asignados
+        const normalized = data.map((u: any) => ({
+          ...u,
+          iduser: normalizeUserId(u),
+          IDUser: normalizeUserId(u),
+        }));
+        
+        // 🔹 Filtrar usuarios duplicados por ID
+        const uniqueUsers = normalized.filter((user, index, self) => {
+          const userId = normalizeUserId(user);
+          if (!userId) return false;
+          return index === self.findIndex((u) => normalizeUserId(u) === userId);
+        });
+        
+        setAssignedUsers(uniqueUsers);
       })
       .catch((err) => console.error("Error cargando usuarios asignados:", err));
   }, [projectId]);
@@ -95,6 +163,18 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
   const handleChange = (name: string, value: any) => {
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // 🔹 Helper para obtener el nombre del usuario
+  const getUserName = (user: any): string => {
+    const userId = normalizeUserId(user);
+    if (user.name) {
+      return user.name;
+    }
+    if (userId && userNames.has(userId)) {
+      return userNames.get(userId)!;
+    }
+    return `Usuario ${userId || 'desconocido'}`;
   };
 
   // 🔹 Helper para obtener el nombre del rol
@@ -136,10 +216,10 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
       alert("✅ Proyecto actualizado correctamente");
 
-      // 🔹 Recargar exactamente igual que el de creación
+      // 🔹 Cerrar el modal y recargar la página actual
       onClose();
-      router.push("/dashboard/academic");
-      window.location.reload(); // fuerza actualización total (igual que crear)
+      // Recargar la página actual para reflejar los cambios
+      window.location.reload();
     } catch (err) {
       console.error(err);
       alert("❌ Error al actualizar el proyecto");
@@ -154,20 +234,36 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
   // 🔹 Asignar usuario
   const handleAssignUser = async () => {
-    if (!selectedUser || !selectedRole) {
+    const userId = selectedUser ? Number(selectedUser) : null;
+    const roleId = selectedRole ? Number(selectedRole) : null;
+
+    if (!userId || !roleId) {
       alert("Selecciona un usuario y un rol.");
       return;
     }
 
     try {
-      await projectService.assignUserToProject(projectId, selectedUser, selectedRole);
+      await projectService.assignUserToProject(projectId, userId, roleId);
       alert("✅ Usuario asignado correctamente");
-      setSelectedUser(null);
-      setSelectedRole(null);
+      setSelectedUser("");
+      setSelectedRole("");
 
       // refresca usuarios del proyecto
       const updated = await projectService.getUsersInProject(projectId);
-      setAssignedUsers(updated);
+      const normalized = updated.map((u: any) => ({
+        ...u,
+        iduser: normalizeUserId(u),
+        IDUser: normalizeUserId(u),
+      }));
+      
+      // 🔹 Filtrar usuarios duplicados por ID
+      const uniqueUsers = normalized.filter((user, index, self) => {
+        const userId = normalizeUserId(user);
+        if (!userId) return false;
+        return index === self.findIndex((u) => normalizeUserId(u) === userId);
+      });
+      
+      setAssignedUsers(uniqueUsers);
     } catch (err) {
       console.error(err);
       alert("❌ No se pudo asignar el usuario.");
@@ -189,7 +285,20 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
       // refresca usuarios del proyecto
       const updated = await projectService.getUsersInProject(projectId);
-      setAssignedUsers(updated);
+      const normalized = updated.map((u: any) => ({
+        ...u,
+        iduser: normalizeUserId(u),
+        IDUser: normalizeUserId(u),
+      }));
+      
+      // 🔹 Filtrar usuarios duplicados por ID
+      const uniqueUsers = normalized.filter((user, index, self) => {
+        const userId = normalizeUserId(user);
+        if (!userId) return false;
+        return index === self.findIndex((u) => normalizeUserId(u) === userId);
+      });
+      
+      setAssignedUsers(uniqueUsers);
     } catch (err) {
       console.error("Error actualizando rol:", err);
       const errorMessage = err instanceof Error ? err.message : "Error desconocido";
@@ -223,7 +332,20 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
       // refresca usuarios del proyecto
       const updated = await projectService.getUsersInProject(projectId);
-      setAssignedUsers(updated);
+      const normalized = updated.map((u: any) => ({
+        ...u,
+        iduser: normalizeUserId(u),
+        IDUser: normalizeUserId(u),
+      }));
+      
+      // 🔹 Filtrar usuarios duplicados por ID
+      const uniqueUsers = normalized.filter((user, index, self) => {
+        const userId = normalizeUserId(user);
+        if (!userId) return false;
+        return index === self.findIndex((u) => normalizeUserId(u) === userId);
+      });
+      
+      setAssignedUsers(uniqueUsers);
     } catch (err) {
       console.error("Error eliminando usuario:", err);
       const errorMessage = err instanceof Error ? err.message : "Error desconocido";
@@ -349,21 +471,24 @@ export default function ProjectEditModal({ project, onClose }: any) {
           {assignedUsers.length > 0 ? (
             <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div className="space-y-2">
-                {assignedUsers.map((user, index) => (
-                  <div key={`user-${user.iduser || user.IDUser}-${index}`} className="bg-white rounded-lg p-3 shadow-sm">
+                {assignedUsers.map((user, index) => {
+                  const userId = normalizeUserId(user);
+                  const userName = getUserName(user);
+                  return (
+                  <div key={`user-${userId}-${index}`} className="bg-white rounded-lg p-3 shadow-sm">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-blue-600 font-semibold text-sm">
-                            {(user.name || `Usuario ${user.iduser}`).charAt(0).toUpperCase()}
+                            {userName.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {user.name || `Usuario ${user.iduser}`}
+                            {userName}
                           </p>
                           <p className="text-sm text-gray-500">
-                            ID: {user.iduser || user.IDUser}
+                            ID: {userId}
                           </p>
                         </div>
                       </div>
@@ -373,7 +498,7 @@ export default function ProjectEditModal({ project, onClose }: any) {
                         </span>
                         <button
                           onClick={() => {
-                            setEditingUserRole(user.iduser || user.IDUser);
+                            setEditingUserRole(userId);
                             setNewRoleForUser(user.idrole || user.IDRole);
                           }}
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
@@ -381,17 +506,17 @@ export default function ProjectEditModal({ project, onClose }: any) {
                           ✏️ Editar
                         </button>
                         <button
-                          onClick={() => handleDeleteUser(user.iduser || user.IDUser)}
-                          disabled={deletingUser === (user.iduser || user.IDUser)}
+                          onClick={() => handleDeleteUser(userId!)}
+                          disabled={deletingUser === userId}
                           className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
                         >
-                          {deletingUser === (user.iduser || user.IDUser) ? "Eliminando..." : "🗑️ Eliminar"}
+                          {deletingUser === userId ? "Eliminando..." : "🗑️ Eliminar"}
                         </button>
                       </div>
                     </div>
                     
                     {/* Interfaz de edición de rol */}
-                    {editingUserRole === (user.iduser || user.IDUser) && (
+                    {editingUserRole === userId && (
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <div className="flex items-center space-x-3">
                           <label className="text-sm font-medium text-gray-700">Nuevo rol:</label>
@@ -408,11 +533,11 @@ export default function ProjectEditModal({ project, onClose }: any) {
                             ))}
                           </select>
                           <button
-                            onClick={() => handleUpdateUserRole(user.iduser || user.IDUser, newRoleForUser!)}
-                            disabled={!newRoleForUser || updatingRole === (user.iduser || user.IDUser)}
+                            onClick={() => handleUpdateUserRole(userId!, newRoleForUser!)}
+                            disabled={!newRoleForUser || updatingRole === userId}
                             className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded text-sm"
                           >
-                            {updatingRole === (user.iduser || user.IDUser) ? "Guardando..." : "Guardar"}
+                            {updatingRole === userId ? "Guardando..." : "Guardar"}
                           </button>
                           <button
                             onClick={() => {
@@ -427,7 +552,8 @@ export default function ProjectEditModal({ project, onClose }: any) {
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -443,33 +569,46 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
           <select
             className="border rounded-lg p-2 w-full mb-3 focus:ring-2 focus:ring-yellow-500 text-black"
-            value={selectedUser || ""}
-            onChange={(e) => setSelectedUser(Number(e.target.value))}
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
           >
             <option value="">Seleccionar usuario</option>
-            {allUsers.map((u) => (
-              <option key={u.id || u.iduser || u.IDUser} value={u.id || u.iduser || u.IDUser}>
-                {u.name || `Usuario ${u.id || u.iduser}`}
-              </option>
-            ))}
+            {allUsers
+              .filter((u) => {
+                // Filtrar usuarios ya asignados al proyecto
+                const userId = u.id || u.iduser || u.IDUser;
+                return !assignedUsers.some((assigned) => normalizeUserId(assigned) === userId);
+              })
+              .map((u) => {
+                const userId = u.id || u.iduser || u.IDUser;
+                return (
+                  <option key={userId} value={String(userId)}>
+                    {u.name || `Usuario ${userId}`}
+                  </option>
+                );
+              })}
           </select>
 
           <select
             className="border rounded-lg p-2 w-full mb-3 focus:ring-2 focus:ring-yellow-500 text-black"
-            value={selectedRole || ""}
-            onChange={(e) => setSelectedRole(Number(e.target.value))}
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
           >
             <option value="">Seleccionar rol</option>
-            {roles.map((r) => (
-              <option key={r.idrole || r.IDRole} value={r.idrole || r.IDRole}>
-                {r.name}
-              </option>
-            ))}
+            {roles.map((r) => {
+              const roleId = r.idrole || r.IDRole;
+              return (
+                <option key={roleId} value={String(roleId)}>
+                  {r.name}
+                </option>
+              );
+            })}
           </select>
 
           <button
             onClick={handleAssignUser}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200"
+            disabled={!selectedUser || !selectedRole}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all duration-200"
           >
             Asignar Usuario
           </button>
