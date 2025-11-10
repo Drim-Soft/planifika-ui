@@ -13,6 +13,7 @@ jobs:
   deploy:
     if: github.event.pull_request.merged == true || github.event_name == 'push'
     runs-on: [self-hosted, main]
+    
 
     steps:
       - name: Show current branch
