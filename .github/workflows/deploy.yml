@@ -1,27 +1,32 @@
-name: Auto Deploy on Develop
+name: Auto Deploy Dynamic
 
 on:
   push:
     branches:
       - develop
+      - main
   pull_request:
-    branches:
-      - develop
     types:
-      - closed  
+      - closed
 
 jobs:
   deploy:
     if: github.event.pull_request.merged == true || github.event_name == 'push'
     runs-on: self-hosted
+
     steps:
+      - name: Show current branch
+        run: echo "Current branch is ${{ github.ref_name }}"
+
       - name: Pull latest code
         run: |
+          BRANCH=${{ github.ref_name }}
           cd /home/estudiante/FRONT/planifika-ui
-          git fetch origin develop
-          git reset --hard origin/develop
+          git fetch origin $BRANCH
+          git reset --hard origin/$BRANCH
 
       - name: Rebuild containers
         run: |
+          BRANCH=${{ github.ref_name }}
           cd /home/estudiante/FRONT
           docker compose up -d --build planifika
