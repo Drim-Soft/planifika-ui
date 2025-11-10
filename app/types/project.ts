@@ -1,0 +1,68 @@
+export interface UserRoleProjectId {
+  IDUser: number;
+  IDRole: number;
+  IDProject: number;
+}
+
+export interface UserRoleProject {
+  IDUser: number;
+  IDRole: number;
+  IDProject: number;
+}
+
+export interface Role {
+  IDRole: number;
+  methodology: Methodology;
+  name: string;
+}
+
+export interface ProjectStatus {
+  IDProjectStatus: number;
+  name: string;
+}
+
+export interface Methodology {
+  IDMethodology: number;
+  name: string;
+  roles?: Role[];
+}
+
+export interface Project {
+  IDProject?: number;
+  methodology?: Methodology;
+  projectStatus?: ProjectStatus;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  percentageProgress?: number;
+  budget?: number;
+  cost?: number;
+  percentageBudgetExecution?: number;
+  IDMethodologyRef?: number;
+  IDProjectStatusRef?: number;
+  userRoleId?: number;  // Added for user's role in project
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  budget?: number;
+  methodologyName?: string | null;
+  statusName?: string | null;
+  IDProjectStatus?: number; // Adding the status ID
+}
+
+
+
+export interface ProjectFormData {
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  budget: string;
+  methodology: string;
+  status: string;
+}

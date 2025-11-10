@@ -1,0 +1,128 @@
+// Tipos para autenticación y roles
+export interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+  photoUrl?: string;
+  role: UserRole;
+}
+
+export interface SignupResponse {
+  auth: {
+    user: {
+      id: string;
+      email: string;
+    };
+    session?: {
+      access_token: string;
+      refresh_token: string;
+    };
+  };
+  db: {
+    iduser: number;
+    name: string;
+    photourl?: string;
+    iduserstatus: number;
+    idusertype: number;
+    idorganization?: number;
+    supabaseuserid: string;
+  };
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  refresh_token: string;
+  user: {
+    id: string;
+    email: string;
+    // Campos adicionales para login externo (estudiante)
+    idUser?: number; // id en BD Planifika
+    iduser?: number; // posibles variantes
+    idPlanifikaUser?: number;
+    name?: string;
+    photoUrl?: string;
+    iduserstatus?: number; // snake/camel del backend
+    idUserStatus?: number;
+    idorganization?: number;
+    idOrganization?: number;
+    idusertype?: number;
+    idUserType?: number;
+    supabaseUserId?: string; // UUID
+    supabaseuserid?: string; // posible variante
+    // Otros posibles campos
+  };
+}
+
+// Respuesta del endpoint /auth/me
+export interface UserInfoResponse {
+  userId: number;
+  name: string;
+  role: string;
+  email: string;
+  photoUrl?: string;
+  idusertype: number;
+  iduserstatus: number;
+  idorganization?: number;
+  userType?: number; // Agregar userType como campo opcional
+}
+
+// Actualización de perfil (/auth/me PATCH)
+export interface UpdateProfileRequest {
+  name?: string;
+  password?: string;
+  photourl?: string; // Para PATCH /auth/me
+}
+
+export interface UpdateProfileResponse {
+  auth?: Record<string, unknown>;
+  db?: {
+    iduser?: number;
+    name?: string;
+  } | { skipped: boolean };
+  supabaseUserId?: string;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  photoUrl?: string;
+  role: UserRole;
+  status: UserStatus;
+  organizationId?: number;
+  supabaseUserId: string;
+}
+
+export enum UserRole {
+  ADMIN = 1,
+  EXTERNAL = 2,
+  COLLABORATOR = 3, // Estudiante/Colaborador
+  SUPERUSER = 4 // Superusuario con acceso completo
+}
+
+export enum UserStatus {
+  ACTIVE = 1,
+  DELETED = 2
+}
+
+export interface AuthError {
+  message: string;
+  code?: string;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  signup: (data: SignupRequest) => Promise<SignupResponse>;
+  login: (data: LoginRequest) => Promise<LoginResponse>;
+  externalLogin: (data: LoginRequest) => Promise<LoginResponse>;
+  logout: () => void;
+  error: AuthError | null;
+  updateUser?: (partial: Partial<User>) => void;
+}

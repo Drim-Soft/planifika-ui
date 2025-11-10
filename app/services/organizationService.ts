@@ -1,5 +1,5 @@
 // Servicio para manejar las operaciones de organizaciones con el backend
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG_ORGANIZATIONS, DEFAULT_API_HEADERS } from '../config/api';
 
 export interface Organization {
   id?: number;
@@ -8,21 +8,29 @@ export interface Organization {
   address?: string;
   phone?: string;
   photoURL?: string;
+  domain?: string;
   users?: any[];
 }
 
 class OrganizationService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG_ORGANIZATIONS.BASE_URL}${endpoint}`;
     
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
+        ...DEFAULT_API_HEADERS,
         ...options.headers,
       },
-      signal: AbortSignal.timeout(API_CONFIG.TIMEOUT),
+      signal: AbortSignal.timeout(API_CONFIG_ORGANIZATIONS.TIMEOUT),
       ...options,
     };
+
+    // Debug logging
+    console.log('Organization Service Request:', {
+      url,
+      headers: config.headers,
+      method: config.method || 'GET'
+    });
 
     try {
       const response = await fetch(url, config);
@@ -47,7 +55,7 @@ class OrganizationService {
       
       // Manejar errores de conexión específicamente
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG.BASE_URL}`);
+        throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG_ORGANIZATIONS.BASE_URL}`);
       }
       
       // Manejar errores de timeout
@@ -67,14 +75,14 @@ class OrganizationService {
     return this.request<Organization>(`/organizations/${id}`);
   }
 
-  async createOrganization(organization: Omit<Organization, 'id'>): Promise<Organization> {
+  async createOrganization(organization: Omit<Organization, 'IDOrganization'>): Promise<Organization> {
     return this.request<Organization>('/organizations', {
       method: 'POST',
       body: JSON.stringify(organization),
     });
   }
 
-  async updateOrganization(id: number, organization: Omit<Organization, 'id'>): Promise<Organization> {
+  async updateOrganization(id: number, organization: Omit<Organization, 'IDOrganization'>): Promise<Organization> {
     return this.request<Organization>(`/organizations/${id}`, {
       method: 'PUT',
       body: JSON.stringify(organization),
