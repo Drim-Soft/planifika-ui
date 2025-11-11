@@ -8,7 +8,7 @@ import { projectService } from "../services/projectService";
 import { Phase } from "@/app/types/phase";
 import PhaseEditModal from "../dashboard/academic/components/PhaseEditModal";
 import PhaseTasksModal from "./PhaseTasksModal";
-import { toast } from "react-hot-toast";
+
 
 export default function ProjectDetailsModal({ project, onClose, user }: any) {
   if (!project) return null;
@@ -167,15 +167,12 @@ export default function ProjectDetailsModal({ project, onClose, user }: any) {
             📋 Fases del Proyecto
           </h3>
 
-          {/* ✅ Solo admins pueden ver este botón */}
-          {isAdmin && (
-            <button
-              onClick={handleCreatePhase}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white text-sm px-3 py-1 rounded-lg transition-colors duration-200"
-            >
-              ➕ Crear Fase
-            </button>
-          )}
+          <button
+            onClick={handleCreatePhase}
+            className="bg-yellow-600 hover:bg-yellow-700 text-white text-sm px-3 py-1 rounded-lg transition-colors duration-200"
+          >
+            ➕ Crear Fase
+          </button>
         </div>
 
         {/* Lista de fases */}

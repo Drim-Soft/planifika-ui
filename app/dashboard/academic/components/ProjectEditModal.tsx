@@ -76,7 +76,7 @@ export default function ProjectEditModal({ project, onClose }: any) {
 
   // 🔹 Helper para normalizar ID de usuario
   const normalizeUserId = (user: any): number | null => {
-    return user?.iduser || user?.IDUser || user?.id || user?.ID || null;
+    return user?.idUser || user?.iduser || user?.IDUser || user?.id || user?.ID || null;
   };
 
   // 🔹 Cargar nombres de usuarios que no tienen nombre
@@ -157,7 +157,15 @@ export default function ProjectEditModal({ project, onClose }: any) {
   useEffect(() => {
     userService
       .getAllUsers()
-      .then((data) => setAllUsers(data))
+      .then((data) => {
+        console.log("🔍 Usuarios cargados desde API:", data);
+        // Verificar la estructura de los datos
+        if (data && data.length > 0) {
+          console.log("🔍 Ejemplo de usuario:", data[0]);
+          console.log("🔍 Claves del primer usuario:", Object.keys(data[0]));
+        }
+        setAllUsers(data);
+      })
       .catch((err) => console.error("Error cargando todos los usuarios:", err));
   }, []);
 
@@ -567,48 +575,61 @@ export default function ProjectEditModal({ project, onClose }: any) {
         <div className="mt-6 border-t pt-4">
           <h3 className="font-semibold mb-3 text-gray-800">➕ Asignar Nuevo Usuario al Proyecto</h3>
 
-          <select
-            className="border rounded-lg p-2 w-full mb-3 focus:ring-2 focus:ring-yellow-500 text-black"
-            value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
-          >
-            <option value="">Seleccionar usuario</option>
-            {allUsers
-              .filter((u) => {
-                // Filtrar usuarios ya asignados al proyecto
-                const userId = u.id || u.iduser || u.IDUser;
-                return !assignedUsers.some((assigned) => normalizeUserId(assigned) === userId);
-              })
-              .map((u) => {
-                const userId = u.id || u.iduser || u.IDUser;
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Usuario</label>
+            <select
+              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-black bg-white cursor-pointer"
+              value={selectedUser}
+              onChange={(e) => {
+                console.log('Usuario seleccionado:', e.target.value);
+                setSelectedUser(e.target.value);
+              }}
+            >
+              <option value="">-- Seleccionar usuario --</option>
+              {allUsers
+                .filter((u) => {
+                  // Filtrar usuarios ya asignados al proyecto
+                  const userId = u.idUser || u.id || u.iduser || u.IDUser || u.userId || u.userid;
+                  return userId && !assignedUsers.some((assigned) => normalizeUserId(assigned) === userId);
+                })
+                .map((u) => {
+                  const userId = u.idUser || u.id || u.iduser || u.IDUser || u.userId || u.userid;
+                  const userName = u.name || u.username || u.userName || u.fullName || u.fullname || `Usuario ${userId}`;
+                  return (
+                    <option key={userId} value={String(userId)}>
+                      {userName}
+                    </option>
+                  );
+                })}
+            </select>
+          </div>
+
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Rol</label>
+            <select
+              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-black bg-white cursor-pointer"
+              value={selectedRole}
+              onChange={(e) => {
+                console.log('Rol seleccionado:', e.target.value);
+                setSelectedRole(e.target.value);
+              }}
+            >
+              <option value="">-- Seleccionar rol --</option>
+              {roles.map((r) => {
+                const roleId = r.idrole || r.IDRole;
                 return (
-                  <option key={userId} value={String(userId)}>
-                    {u.name || `Usuario ${userId}`}
+                  <option key={roleId} value={String(roleId)}>
+                    {r.name}
                   </option>
                 );
               })}
-          </select>
-
-          <select
-            className="border rounded-lg p-2 w-full mb-3 focus:ring-2 focus:ring-yellow-500 text-black"
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-          >
-            <option value="">Seleccionar rol</option>
-            {roles.map((r) => {
-              const roleId = r.idrole || r.IDRole;
-              return (
-                <option key={roleId} value={String(roleId)}>
-                  {r.name}
-                </option>
-              );
-            })}
-          </select>
+            </select>
+          </div>
 
           <button
             onClick={handleAssignUser}
             disabled={!selectedUser || !selectedRole}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all duration-200"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all duration-200 w-full"
           >
             Asignar Usuario
           </button>
