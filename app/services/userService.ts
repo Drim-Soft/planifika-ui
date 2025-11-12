@@ -91,11 +91,6 @@ class UserService {
       method: 'DELETE',
     });
   }
-
-  // Método para obtener usuarios por organización
-  async getUsersByOrganization(organizationId: number): Promise<UserProfile[]> {
-    return this.request<UserProfile[]>(`/organizations/${organizationId}/users`);
-  }
 }
 
 export const userService = new UserService();

@@ -1,9 +1,10 @@
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
-import {ChevronLeft, ChevronRight, LogOut, UserCircle, Edit2, LifeBuoy, Plus, Calendar, Building2} from "lucide-react";
+import Link from "next/link";
+import {ChevronLeft, ChevronRight, LogOut, UserCircle, Edit2, LifeBuoy, Plus, Calendar, Building2, Users} from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { ticketService } from "../services/ticketService";
 import { TicketResponse } from "../types/ticket";
@@ -11,6 +12,7 @@ import CreateTicketModal from "./CreateTicketModal";
 import TicketModal from "./TicketModal";
 import OrganizationModal from "./OrganizationModal";
 import { organizationService } from "../services/organizationService";
+// Nota: la ruta correcta para usuarios por organización está en organizationService
 import {UserRole} from "@/app/types/auth";
 
 type SidebarProfileProps = {
@@ -38,6 +40,9 @@ export default function SidebarProfile({
     const [showTicketsList, setShowTicketsList] = useState(false);
     const [showOrgModal, setShowOrgModal] = useState(false);
     const [editingOrg, setEditingOrg] = useState<any>(null);
+    const [orgUsers, setOrgUsers] = useState<any[]>([]);
+    const [isLoadingOrgUsers, setIsLoadingOrgUsers] = useState(false);
+    // Vista completa de Personas ahora vive en /dashboard/people
 
     // Determinar el label del rol dinámicamente
     const getUserRoleLabel = () => {
@@ -67,6 +72,10 @@ export default function SidebarProfile({
 
     // Verificar si el usuario tiene acceso a tareas
     const hasTaskAccess = user?.role === UserRole.EXTERNAL || user?.role === UserRole.COLLABORATOR;
+    const isAdminWithOrg = user?.role === UserRole.ADMIN && !!user?.organizationId;
+    
+    console.log('[SidebarProfile] user:', user);
+    console.log('[SidebarProfile] isAdminWithOrg:', isAdminWithOrg, 'role:', user?.role, 'orgId:', user?.organizationId);
 
     // Cargar tickets del usuario
     useEffect(() => {
@@ -121,6 +130,25 @@ export default function SidebarProfile({
         setShowTicketsList(false);
     };
 
+    // Cargar usuarios de la organización para ADMIN
+    useEffect(() => {
+        const loadOrgUsers = async () => {
+            if (!isAdminWithOrg) return;
+            try {
+                setIsLoadingOrgUsers(true);
+                console.log('[Sidebar] Cargando personas de organización', user!.organizationId);
+                const users = await organizationService.getUsersByOrganization(user!.organizationId!);
+                setOrgUsers(users || []);
+            } catch (e) {
+                console.error('Error cargando usuarios de la organización (organizationService):', e);
+                setOrgUsers([]);
+            } finally {
+                setIsLoadingOrgUsers(false);
+            }
+        };
+        loadOrgUsers();
+    }, [isAdminWithOrg, user?.organizationId]);
+
     // Organización: abrir modal para editar
     const handleOpenOrganization = async () => {
         if (!user?.organizationId) {
@@ -158,6 +186,7 @@ export default function SidebarProfile({
     };
 
     return (
+        <>
         <aside className={`bg-gradient-to-b from-[#222831] to-[#1a1f26] text-white transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'} h-screen sticky top-0 flex-shrink-0 flex flex-col shadow-2xl z-30`}>
             {/* Header con foto y nombre */}
             <div className="p-4 border-b border-gray-700 flex items-center justify-between">
@@ -290,6 +319,24 @@ export default function SidebarProfile({
                     </button>
                 )}
 
+                {/* Personas de mi Organización (solo Admin) */}
+                {isAdminWithOrg && (
+                        <button
+                            onClick={() => router.push('/dashboard/people')}
+                            className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[#FFD369]/10 text-gray-200 text-sm font-medium relative"
+                        >
+                            <Users className="w-5 h-5 text-[#FFD369]" />
+                            {!collapsed && (
+                                <>
+                                    <span>Personas</span>
+                                    <span className="ml-auto bg-[#FFD369] text-[#222831] text-xs font-bold rounded-full min-w-5 h-5 px-2 flex items-center justify-center">
+                                        {isLoadingOrgUsers ? '…' : orgUsers.length}
+                                    </span>
+                                </>
+                            )}
+                        </button>
+                )}
+
                 {/* Sección de Soporte */}
                 <div className="mt-4 pt-4 border-t border-gray-700">
                     <div className="flex items-center justify-between mb-2 px-3">
@@ -390,5 +437,6 @@ export default function SidebarProfile({
                 />
             )}
         </aside>
+        </>
     );
 }

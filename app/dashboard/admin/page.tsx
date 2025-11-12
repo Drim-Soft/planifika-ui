@@ -8,6 +8,7 @@ import { projectService } from "../../services/projectService";
 import { Project } from "../../types/project";
 import SidebarProfile from "../../components/SidebarProfile";
 import { userService } from "../../services/userService";
+import { organizationService } from "../../services/organizationService";
 import CreateProjectForm from "../../components/CreateProjectForm";
 import ProjectDetailsModal from "../../components/ProjectDetailsModal";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
