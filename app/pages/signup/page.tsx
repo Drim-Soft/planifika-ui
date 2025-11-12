@@ -18,7 +18,7 @@ function SignUpContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { signup, isLoading, error } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -30,12 +30,12 @@ function SignUpContent() {
 
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
-  
+
   // Configurar reglas de validación
   const validationRules = {
     name: { required: true, minLength: 2, maxLength: 100 },
-    email: { 
-      required: true, 
+    email: {
+      required: true,
       pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
       custom: (value: string) => {
         if (!value.includes('@')) return 'El email debe contener @';
@@ -44,14 +44,14 @@ function SignUpContent() {
       }
     },
     password: { required: true, minLength: 6, maxLength: 50 },
-    confirmPassword: { 
+    confirmPassword: {
       required: true,
       custom: (value: string) => {
         if (value !== formData.password) return 'Las contraseñas no coinciden';
         return null;
       }
     },
-    phone: { 
+    phone: {
       required: userRole === UserRole.ADMIN,
       pattern: /^[\+]?[1-9][\d]{0,15}$/,
       custom: (value: string) => {
@@ -72,17 +72,17 @@ function SignUpContent() {
 
   const { errors, validateForm, validateSingleField, clearError } = useFormValidation(validationRules);
 
-  // Obtener el rol desde la URL
+  // Obtener el rol y organizationId desde la URL
   useEffect(() => {
     const roleParam = searchParams.get('role');
     const role = getRoleFromUrlParam(roleParam);
-    
+
     if (!role || !validateRole(role)) {
       // Si no hay rol válido, redirigir a la página principal
       router.push('/');
       return;
     }
-    
+
     setUserRole(role);
   }, [searchParams, router]);
 
@@ -92,7 +92,7 @@ function SignUpContent() {
       ...prev,
       [name]: value
     }));
-    
+
     // Validar campo en tiempo real
     validateSingleField(name, value);
   };
@@ -101,22 +101,27 @@ function SignUpContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isCaptchaVerified) {
       return;
     }
-    
+
     if (!validateForm(formData) || !userRole) {
       return;
     }
 
     try {
+      // Obtener organizationId de los query params si el rol es ADMIN
+      const organizationIdParam = searchParams.get('organizationId');
+      const organizationId = organizationIdParam ? parseInt(organizationIdParam, 10) : undefined;
+
       const signupData: SignupRequest = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
         role: userRole,
-        photoUrl: formData.photoUrl || undefined
+        photoUrl: formData.photoUrl || undefined,
+        organizationId: userRole === UserRole.ADMIN && organizationId ? organizationId : undefined
       };
 
       await signup(signupData);
@@ -142,7 +147,7 @@ function SignUpContent() {
       <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden">
         <div className="flex flex-col lg:flex-row min-h-[600px]">
           {/* Sección Visual - 70% */}
-          <div 
+          <div
             className="lg:w-[70%] relative overflow-hidden"
             style={{
               backgroundImage: 'url(https://images.unsplash.com/photo-1515378960530-7c0da6231fb1?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170)',
@@ -154,7 +159,7 @@ function SignUpContent() {
           >
             {/* Overlay con color #A19186 */}
             <div className="absolute inset-0" style={{ backgroundColor: '#A19186', opacity: 0.3 }}></div>
-            
+
             {/* Contenido de la sección visual */}
             <div className="relative z-10 flex flex-col justify-between h-full p-8 lg:p-12 text-white">
               {/* Logo */}
@@ -238,9 +243,8 @@ function SignUpContent() {
                         name="name"
                         value={formData.name}
                         onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
-                          errors.name ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
-                        }`}
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${errors.name ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                          }`}
                         placeholder="Tu nombre completo"
                         required
                       />
@@ -265,9 +269,8 @@ function SignUpContent() {
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
-                          errors.email ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
-                        }`}
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${errors.email ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                          }`}
                         placeholder="tu.email@universidad.edu"
                         required
                       />
@@ -292,9 +295,8 @@ function SignUpContent() {
                         name="password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
-                          errors.password ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
-                        }`}
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${errors.password ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                          }`}
                         placeholder="••••••••"
                         required
                       />
@@ -320,9 +322,8 @@ function SignUpContent() {
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
-                          errors.confirmPassword ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
-                        }`}
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                          }`}
                         placeholder="••••••••"
                         required
                       />
@@ -347,9 +348,8 @@ function SignUpContent() {
                         name="photoUrl"
                         value={formData.photoUrl}
                         onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
-                          errors.photoUrl ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
-                        }`}
+                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${errors.photoUrl ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                          }`}
                         placeholder="https://ejemplo.com/mi-foto.jpg"
                       />
                       <div className="absolute right-2 top-2 text-gray-400 text-sm">
@@ -376,9 +376,8 @@ function SignUpContent() {
                             name="phone"
                             value={formData.phone}
                             onChange={handleInputChange}
-                            className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
-                              errors.phone ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
-                            }`}
+                            className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${errors.phone ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                              }`}
                             placeholder="+57 300 123 4567"
                             required
                           />
@@ -400,11 +399,10 @@ function SignUpContent() {
                   <button
                     type="submit"
                     disabled={isLoading || !isCaptchaVerified}
-                    className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm ${
-                      isLoading || !isCaptchaVerified
-                        ? 'bg-gray-400 cursor-not-allowed text-white' 
+                    className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm ${isLoading || !isCaptchaVerified
+                        ? 'bg-gray-400 cursor-not-allowed text-white'
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
+                      }`}
                   >
                     {isLoading ? 'CREANDO CUENTA...' : 'CREAR CUENTA'}
                   </button>
@@ -414,8 +412,8 @@ function SignUpContent() {
                 <div className="mt-6 text-center">
                   <p className="text-xs text-gray-600">
                     ¿Ya tienes una cuenta?{" "}
-                    <Link 
-                      href={EXTERNAL_URLS.MAIN_SYSTEM ?? '/'} 
+                    <Link
+                      href={EXTERNAL_URLS.MAIN_SYSTEM ?? '/'}
                       className="text-blue-600 hover:text-blue-700 font-medium"
                     >
                       Inicia sesión
