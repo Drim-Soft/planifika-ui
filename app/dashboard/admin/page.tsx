@@ -82,12 +82,16 @@ export default function AdminDashboard() {
   (globalThis as any).__adminDashLoaded = hasLoadedRef;
 
   useEffect(() => {
-    const loadAllProjects = async () => {
+    const loadUserProjects = async () => {
       if (!user) return;
 
       try {
         setIsLoadingProjects(true);
-        const projects = await projectService.getAllProjects();
+        // Si es superusuario, obtener todos los proyectos
+        // Si es admin, obtener solo los proyectos del usuario
+        const projects = user.role === UserRole.SUPERUSER 
+          ? await projectService.getAllProjects()
+          : await projectService.getUserProjects(user.id);
 
         // Normalizar los proyectos para asegurar consistencia de IDs
         const normalized = projects.map((p: any) => ({
@@ -119,13 +123,16 @@ export default function AdminDashboard() {
             index === self.findIndex((p) => p.IDProject === project.IDProject)
         );
 
-        // Superusuario siempre tiene acceso completo - asignar el primer rol de admin disponible
-        const projectsWithFullAccess = uniqueProjects.map((proj) => ({
+        // Solo superusuarios tienen acceso completo a todos los proyectos
+        // Administradores regulares solo ven sus proyectos asignados
+        const projectsWithAccess = uniqueProjects.map((proj) => ({
           ...proj,
-          userRoleId: ADMIN_PROJECT_ROLE_IDS[0], // Asignar rol de admin para acceso completo
+          userRoleId: user.role === UserRole.SUPERUSER 
+            ? ADMIN_PROJECT_ROLE_IDS[0] // Superusuario: acceso completo
+            : proj.userRoleId || ADMIN_PROJECT_ROLE_IDS[0], // Admin: mantener rol asignado o dar acceso completo
         }));
 
-        setUserProjects(projectsWithFullAccess);
+        setUserProjects(projectsWithAccess);
         setAllProjects(normalized);
       } catch (err) {
         console.error('Error loading projects:', err);
@@ -136,7 +143,7 @@ export default function AdminDashboard() {
 
     if (isAuthenticated && user && !hasLoadedRef.current) {
       hasLoadedRef.current = true;
-      loadAllProjects();
+      loadUserProjects();
     }
   }, [isAuthenticated, user]);
 
@@ -215,7 +222,10 @@ export default function AdminDashboard() {
     if (!user) return;
     try {
       setIsLoadingProjects(true);
-      const projects = await projectService.getAllProjects();
+      // Aplicar la misma lógica del useEffect principal
+      const projects = user.role === UserRole.SUPERUSER 
+        ? await projectService.getAllProjects()
+        : await projectService.getUserProjects(user.id);
       
       // Normalizar igual que en el useEffect principal
       const normalized = projects.map((p: any) => ({
@@ -249,7 +259,9 @@ export default function AdminDashboard() {
 
       const projectsWithFullAccess = uniqueProjects.map((proj) => ({
         ...proj,
-        userRoleId: ADMIN_PROJECT_ROLE_IDS[0], // Superusuario siempre tiene acceso completo
+        userRoleId: user.role === UserRole.SUPERUSER 
+          ? ADMIN_PROJECT_ROLE_IDS[0] // Superusuario: acceso completo
+          : proj.userRoleId || ADMIN_PROJECT_ROLE_IDS[0], // Admin: mantener rol asignado o dar acceso completo
       }));
 
       setUserProjects(projectsWithFullAccess);
@@ -286,7 +298,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando dashboard de superusuario...</p>
+          <p className="text-gray-600">Cargando dashboard de administrador...</p>
         </div>
       </div>
     );
@@ -304,12 +316,13 @@ export default function AdminDashboard() {
         {/* Bienvenida */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            ¡Bienvenido, {user.name}! 👑
+            ¡Bienvenido, {user.name}! {user.role === UserRole.SUPERUSER ? '👑' : '⚡'}
           </h2>
           <p className="text-gray-600">
-            {user.role === UserRole.ADMIN
-              ? 'Panel administrativo - Gestión de tu organización y proyectos.'
-              : 'Panel de superusuario - Gestión completa de proyectos, fases y tareas.'}
+            {user.role === UserRole.SUPERUSER 
+              ? "Panel de superusuario - Gestión completa de proyectos, fases y tareas."
+              : "Panel de administrador - Gestión de tus proyectos asignados."
+            }
           </p>
         </div>
 
@@ -416,7 +429,9 @@ export default function AdminDashboard() {
         {/* Botón para crear proyecto */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-bold text-gray-900">Todos los Proyectos</h3>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {user.role === UserRole.SUPERUSER ? "Todos los Proyectos" : "Mis Proyectos"}
+            </h3>
             <div className="flex items-center gap-3">
               <button 
                 onClick={handleCreateNewProject}
