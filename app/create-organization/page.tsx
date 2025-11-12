@@ -1,14 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import OrganizationModal from "../components/OrganizationModal";
-import { organizationService, Organization } from "../services/organizationService";
 import { useAuth } from "../contexts/AuthContext";
 import { UserRole } from "../types/auth";
-import { userService } from "../services/userService";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -16,7 +12,6 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export default function CreateOrganization() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const router = useRouter();
-  const [isModalOpen, setIsModalOpen] = useState(true);
 
   // Verificar autenticación y rol
   useEffect(() => {
@@ -38,18 +33,7 @@ export default function CreateOrganization() {
     }
   }, [isAuthenticated, authLoading, user, router]);
 
-  const handleCreateOrganization = async (organizationData: Omit<Organization, 'IDOrganization'>) => {
-    try {
-      const newOrganization = await organizationService.createOrganization(organizationData);
-      console.log("Organización creada:", newOrganization);
-  await userService.updateUserOrganization(user!.id, newOrganization?.id!);
-  // Redirigir directamente al dashboard administrativo para evitar hop intermedio
-  router.replace('/dashboard/admin');
-    } catch (error) {
-      console.error("Error al crear organización:", error);
-      throw error;
-    }
-  };
+  // Nota: Se removió la creación de organización aquí según solicitud.
 
   // Mostrar loading mientras se verifica la autenticación
   if (authLoading) {
@@ -68,87 +52,40 @@ export default function CreateOrganization() {
     return null;
   }
 
-  return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Capa de fondo */}
-      <div className="absolute inset-0 -z-10">
-        {/* El padre DIRECTO de <Image fill> debe ser relative y tener tamaño */}
-        <div className="relative w-full h-full">
-          <Image
-            src="/assets/images/fondoCrearOrg.jpg"
-            alt="Fondo de crear organización"
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-            onError={(e) => {
-              // si falla, puedes dejar un color de fondo de respaldo
-              (e.target as HTMLImageElement).style.display = "none";
+  // Si es admin y NO tiene organización, mostrar página informativa
+  if (user.role === UserRole.ADMIN && !user.organizationId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">No tienes plan aún</h2>
+          <p className="text-gray-600 mb-6">
+            Para comenzar, necesitas seleccionar o crear un plan. Puedes ver los planes disponibles haciendo clic en el botón de abajo.
+          </p>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200 mb-4"
+            onClick={() => {
+              window.location.href = "https://traducianistic-immorally-harmony.ngrok-free.dev/plans";
             }}
-          />
-          {/* Oscurecedor */}
-          <div className="absolute inset-0 bg-black/30" />
+          >
+            Ver Planes
+          </button>
         </div>
       </div>
+    );
+  }
 
-      {/* Header */}
-      <div className="relative z-10 bg-white/90 backdrop-blur-sm shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                <span className="text-yellow-500">Planifika</span>
-              </h1>
-              <p className="text-gray-600 mt-1">Gestión de Organizaciones</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-600 text-sm">
-                Bienvenido, {user?.name || 'Administrador'}
-              </span>
-              <button
-                onClick={logout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Cerrar Sesión
-              </button>
-              <Link
-                href="/"
-                className="planifika-button-secondary flex items-center gap-2"
-              >
-                ← Volver al Inicio
-              </Link>
-            </div>
-          </div>
-        </div>
+  // Si es admin y ya tiene organización, mostrar el contenido normal (no debería llegar aquí por el guard, pero por si acaso)
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold mb-4 text-gray-900">Ya tienes una organización registrada.</h2>
+        <button
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200"
+          onClick={() => router.push('/dashboard/admin')}
+        >
+          Ir al Dashboard
+        </button>
       </div>
-
-      {/* Contenido principal */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="planifika-card bg-white/90 backdrop-blur-sm p-8 text-center">
-            <h3 className="text-2xl font-bold text-black mb-2">Crear organización</h3>
-            <p className="text-gray-700 mb-6">Registra los datos de tu organización para continuar.</p>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="planifika-button-primary text-lg px-8 py-3"
-            >
-              + Crear Nueva Organización
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <OrganizationModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-        }}
-        onSave={handleCreateOrganization}
-        editingOrganization={null}
-      />
     </div>
   );
 }
