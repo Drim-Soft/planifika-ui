@@ -5,7 +5,7 @@ import { SignupRequest, SignupResponse, LoginRequest, LoginResponse, UserInfoRes
 class AuthService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_CONFIG_USERS_PLANIFIKA.BASE_URL}${endpoint}`;
-    
+
     const config: RequestInit = {
       headers: {
         ...DEFAULT_API_HEADERS,
@@ -17,35 +17,35 @@ class AuthService {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         let errorMessage = `Error del servidor: ${response.status}`;
-        
+
         try {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.error || errorData.message || errorMessage;
         } catch {
           errorMessage = errorText || errorMessage;
         }
-        
+
         throw new Error(errorMessage);
       }
-      
+
       return await response.json();
     } catch (error) {
       console.error('API request failed:', error);
-      
+
       // Manejar errores de conexión específicamente
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté ejecutándose en ${API_CONFIG_USERS_PLANIFIKA.BASE_URL}`);
       }
-      
+
       // Manejar errores de timeout
       if (error instanceof Error && error.name === 'TimeoutError') {
         throw new Error('La solicitud tardó demasiado tiempo. El servidor puede estar sobrecargado o no disponible.');
       }
-      
+
       throw error;
     }
   }
@@ -56,7 +56,8 @@ class AuthService {
       email: data.email,
       password: data.password,
       photoUrl: data.photoUrl || null,
-      userRole: data.role // Enviar el rol al backend
+      userRole: data.role, // Enviar el rol al backend
+      organizationId: data.organizationId || null // Enviar organizationId si está presente
     };
 
     return this.request<SignupResponse>('/auth/signup', {
@@ -66,17 +67,17 @@ class AuthService {
   }
 
   async login(data: LoginRequest): Promise<LoginResponse> {
-  const result = await this.request<LoginResponse>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+    const result = await this.request<LoginResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
 
-  if (result.access_token) {
-    localStorage.setItem('token', result.access_token);
+    if (result.access_token) {
+      localStorage.setItem('token', result.access_token);
+    }
+
+    return result;
   }
-
-  return result;
-}
 
   async getCurrentUser(accessToken: string): Promise<UserInfoResponse> {
     return this.request<UserInfoResponse>('/auth/me', {
