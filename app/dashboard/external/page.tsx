@@ -19,7 +19,7 @@ export default function ExternalDashboard() {
   const router = useRouter();
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [isLoadingAllProjects, setIsLoadingAllProjects] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [editProject, setEditProject] = useState<any>(null);
@@ -435,6 +435,23 @@ export default function ExternalDashboard() {
         </div>
 
         {/* Estadísticas */}
+        {isLoadingProjects ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 animate-pulse">
+                <div className="flex items-center">
+                  <div className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                    <div className="w-8 h-8"></div>
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2"></div>
+                    <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
@@ -484,6 +501,7 @@ export default function ExternalDashboard() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Botón para abrir modal de proyectos disponibles */}
         <div className="mb-8">
@@ -529,7 +547,23 @@ export default function ExternalDashboard() {
                 </div>
 
                 {isLoadingAllProjects ? (
-                  <div className="text-center py-8 text-gray-500">Cargando proyectos disponibles...</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 animate-pulse">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                          </div>
+                          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div>
+                        </div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6 mb-4"></div>
+                        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full w-full mb-4"></div>
+                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -683,6 +717,30 @@ export default function ExternalDashboard() {
           <div className="flex justify-between items-center mb-6">
           </div>
 
+          {isLoadingProjects ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 animate-pulse">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    </div>
+                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div>
+                  </div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6 mb-4"></div>
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full w-full mb-4"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
+                  <div className="flex gap-2">
+                    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded flex-1"></div>
+                    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(() => {
               // Filtrar proyectos
@@ -696,8 +754,13 @@ export default function ExternalDashboard() {
               const indexOfFirstProject = indexOfLastProject - projectsPerPage;
               const currentProjects = filteredProjects.slice(indexOfFirstProject, indexOfLastProject);
               
-              return currentProjects.map((project) => (
-              <div key={project.IDProject} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+              return currentProjects.length === 0 ? (
+                <div className="col-span-3 text-center py-12">
+                  <p className="text-gray-500 text-lg">No hay proyectos disponibles</p>
+                </div>
+              ) : (
+                currentProjects.map((project) => (
+                  <div key={project.IDProject} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
                 <div className="p-6">
                   {/* Header de la tarjeta */}
                   <div className="flex justify-between items-start mb-4">
@@ -789,9 +852,11 @@ export default function ExternalDashboard() {
                   </div>
                 </div>
               </div>
-            ));
+                ))
+              )
             })()}
           </div>
+          )}
 
           {/* Paginación para Mis Proyectos */}
           {(() => {

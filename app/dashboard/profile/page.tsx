@@ -8,6 +8,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { authService } from "../../services/authService";
 import { UpdateProfileRequest } from "../../types/auth";
 import { useFormValidation } from "../../hooks/useFormValidation";
+import PasswordInput from "../../components/PasswordInput";
+import PasswordMeter from "../../components/PasswordMeter";
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading, logout, updateUser } = useAuth();
@@ -231,26 +233,27 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
-                <input
-                  type="password"
+                <PasswordInput
                   name="password"
                   value={form.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 text-base ${errors.password ? 'border-red-300' : 'border-gray-300'}`}
+                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-200 text-base bg-white dark:bg-gray-800 ${errors.password ? 'border-red-300' : 'border-gray-300'}`}
+                  error={errors.password}
                 />
+                {form.password && <PasswordMeter password={form.password} />}
                 {errors.password && <p className="text-sm text-red-600 mt-1">{errors.password}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
-                <input
-                  type="password"
+                <PasswordInput
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 text-base ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'}`}
+                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-200 text-base bg-white dark:bg-gray-800 ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'}`}
+                  error={errors.confirmPassword}
                 />
                 {errors.confirmPassword && <p className="text-sm text-red-600 mt-1">{errors.confirmPassword}</p>}
               </div>
@@ -273,7 +276,7 @@ export default function ProfilePage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60"
+                className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-700"
               >
                 {submitting ? 'Guardando...' : 'Guardar cambios'}
               </button>
