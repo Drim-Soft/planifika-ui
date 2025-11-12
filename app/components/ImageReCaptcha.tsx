@@ -15,24 +15,24 @@ const CAPTCHA_CHALLENGES = [
   { 
     category: "traffic lights", 
     images: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop", // semáforo - ID verificado
-      "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop", // semáforo - ID verificado
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop", // semáforo - ID verificado
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgcOfyURqwV5RRni-yhJjdb0sYHEmEnLloiQ&s", // semáforo - ID verificado
+      "https://japantravelplanning.com/wp-content/uploads/2023/10/Red-yellow-and-blue-traffic-lights.jpg", // semáforo - ID verificado
+      "https://www.lilawyer.com/wp-content/uploads/2022/10/3-long-island-personal-injury-lawyer-what-is-the-rule-law-when-traffic-lights-are-out.jpeg", // semáforo - ID verificado
     ]
   },
   { 
     category: "bicycles", 
     images: [
       "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=200&h=200&fit=crop", // bicicleta - ID verificado
-      "https://images.unsplash.com/photo-1551524164-6cf77f5e1d4e?w=200&h=200&fit=crop", // bicicleta - ID verificado
-      "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=200&h=200&fit=crop", // bicicleta - ID verificado
+      "https://hips.hearstapps.com/hmg-prod/images/gettyimages-1658233950.jpg?resize=980:*", // bicicleta - ID verificado
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1R3PfZyrIzRBTNMEqdg_EGtWP2qfX35yO7g&s", // bicicleta - ID verificado
     ]
   },
   { 
     category: "mountains", 
     images: [
       "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&h=200&fit=crop", // montaña - ID verificado
-      "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=200&h=200&fit=crop", // montaña - ID verificado
+      "https://content.nationalgeographic.com.es/medio/2025/01/18/himalaya_68c32f8b_250118135425_800x800.webp", // montaña - ID verificado
       "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=200&h=200&fit=crop", // montaña - ID verificado
     ]
   },
@@ -41,15 +41,15 @@ const CAPTCHA_CHALLENGES = [
     images: [
       "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=200&h=200&fit=crop", // autobús - ID verificado
       "https://images.unsplash.com/photo-1557223562-6c77ef16210f?w=200&h=200&fit=crop", // autobús - ID verificado
-      "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=200&h=200&fit=crop", // autobús - ID verificado
+      "https://colaboracion.dnp.gov.co/CDT/PublishingImages/Noticias/2023/Septiembre/bus-electrico-monteria.jpeg", // autobús - ID verificado
     ]
   },
   { 
     category: "crosswalks", 
     images: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop", // cruce peatonal - ID verificado
-      "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop", // cruce peatonal - ID verificado
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop", // cruce peatonal - ID verificado
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Crosswalk_New_York_City_0001.jpg/1200px-Crosswalk_New_York_City_0001.jpg", // cruce peatonal - ID verificado
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSK6PotZsb4JdCOm6xhnKAD8tzrSAtHzp0fiQ&s", // cruce peatonal - ID verificado
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT-fEc6zDL2mLQoj3C9cFyNSDflS4cTosiAgA&s", // cruce peatonal - ID verificado
     ]
   },
   { 
@@ -68,11 +68,11 @@ const OTHER_IMAGES = [
   "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200&h=200&fit=crop", // comida - pizza
   "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop", // comida - plato
   "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop", // comida - hamburguesa
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=200&h=200&fit=crop", // flores
+  "https://i.ytimg.com/vi/9XimutDsfsY/hqdefault.jpg", // 
   "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=200&h=200&fit=crop", // océano
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=200&h=200&fit=crop", // bosque
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=200&h=200&fit=crop", // naturaleza
-  "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=200&h=200&fit=crop", // paisaje
+  "https://cdn4.fincaraiz.com.co/repo/img/th.outside384x275.67b35aff6b5a0_infocdn__gr1851502520250116041513jpg.jpg", // 
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS9QuYlM7zFTm_of1EtB_pDzJ5YaPn7utDVPA&s", 
 ];
 
 export default function ImageReCaptcha({ onVerify, className = "" }: ImageReCaptchaProps) {
