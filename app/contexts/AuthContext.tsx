@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '../services/authService';
 import { SignupRequest, SignupResponse, LoginRequest, LoginResponse, User, UserRole, UserInfoResponse, AuthError, AuthContextType } from '../types/auth';
-import { getDefaultRouteForRole } from '../utils/roleUtils';
+import { getDefaultRouteForRole, getDefaultRouteForUser } from '../utils/roleUtils';
 
 // Helper pequeño para formatear un email como nombre si backend no devuelve name
 function formatEmailToName(email?: string | null): string {
@@ -232,9 +232,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setUser(userData);
 
-      // Redireccionar según el rol
-      const defaultRoute = getDefaultRouteForRole(userData.role);
-      router.push(defaultRoute);
+  // Usar helper que considera organizationId
+  const target = getDefaultRouteForUser(userData);
+  console.log('[login redirect] role:', userData.role, 'organizationId:', userData.organizationId, '=>', target);
+  router.push(target);
 
       return response;
     } catch (error) {
@@ -385,8 +386,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         setUser(userData);
 
-        // Redireccionar al dashboard académico
-        router.push('/dashboard/academic');
+  const target = getDefaultRouteForUser(userData);
+  console.log('[externalLogin redirect] role:', userData.role, 'organizationId:', userData.organizationId, '=>', target);
+  router.push(target);
 
         return response;
     } catch (error) {

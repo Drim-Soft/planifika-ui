@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "../contexts/AuthContext";
@@ -11,6 +11,7 @@ import { getRoleLabel } from "../utils/roleUtils";
 export default function Dashboard() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [stats, setStats] = useState({
     totalProjects: 0,
     activeProjects: 0,
@@ -25,28 +26,31 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Redirigir según el rol del usuario
+  // Redirigir según el rol del usuario (admin con organización va a dashboard/admin)
   useEffect(() => {
-    if (user) {
-      switch (user.role) {
-        case UserRole.ADMIN:
-          router.push('/create-organization');
-          break;
-        case UserRole.EXTERNAL:
-          router.push('/dashboard/external');
-          break;
-        case UserRole.COLLABORATOR:
-          router.push('/dashboard/academic');
-          break;
-        case UserRole.SUPERUSER:
-          router.push('/dashboard/admin');
-          break;
-        default:
-          // Mantener en dashboard principal para otros roles
-          break;
-      }
+    if (!user) return;
+    // Evitar redirigir si ya estamos en la ruta destino
+    const go = (target: string) => {
+      if (pathname === target) return; // Ya estamos donde queremos
+      router.replace(target); // replace para evitar historial de saltos
+    };
+    if (user.role === UserRole.ADMIN) {
+      go(user.organizationId ? '/dashboard/admin' : '/create-organization');
+      return;
     }
-  }, [user, router]);
+    if (user.role === UserRole.EXTERNAL) {
+      go('/dashboard/external');
+      return;
+    }
+    if (user.role === UserRole.COLLABORATOR) {
+      go('/dashboard/academic');
+      return;
+    }
+    if (user.role === UserRole.SUPERUSER) {
+      go('/dashboard/admin');
+      return;
+    }
+  }, [user, router, pathname]);
 
   if (isLoading) {
     return (

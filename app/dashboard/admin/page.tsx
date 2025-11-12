@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { projectService } from "../../services/projectService";
 import { Project } from "../../types/project";
 import SidebarProfile from "../../components/SidebarProfile";
+import { userService } from "../../services/userService";
 import CreateProjectForm from "../../components/CreateProjectForm";
 import ProjectDetailsModal from "../../components/ProjectDetailsModal";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
@@ -32,6 +33,10 @@ export default function AdminDashboard() {
     completedProjects: 0,
     pendingProjects: 0
   });
+  const [orgUserCount, setOrgUserCount] = useState<number | null>(null);
+  const [isLoadingOrgUsers, setIsLoadingOrgUsers] = useState(false);
+  const [roleCounts, setRoleCounts] = useState<Record<string, number>>({});
+  const [isLoadingRoleCounts, setIsLoadingRoleCounts] = useState(false);
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -40,14 +45,58 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Redirigir si no es superusuario
+  // Guard de acceso: permitir SUPERUSER siempre; permitir ADMIN solo si tiene organización.
+  // Evitar loops usando pathname y router.replace (no añade al historial).
+  const pathname = usePathname();
+  // Guard más estable: esperar a que termine carga y no saltar al dashboard genérico.
+  const hasGuardRun = useRef(false);
   useEffect(() => {
-    if (user && user.role !== UserRole.SUPERUSER) {
-      router.push('/dashboard');
+    if (hasGuardRun.current) return; // correr una sola vez para evitar ruido en StrictMode
+    if (isLoading) return; // esperar a carga inicial
+    if (!user) return; // aún sin usuario
+
+    const isSuper = user.role === UserRole.SUPERUSER;
+    const hasOrg = typeof user.organizationId === 'number' ? user.organizationId > 0 : !!user.organizationId;
+    const isAdmin = user.role === UserRole.ADMIN;
+    const isAdminWithOrg = isAdmin && hasOrg;
+    const needsOrgCreation = isAdmin && !hasOrg;
+
+    console.log('[admin guard] role:', user.role, 'organizationId:', user.organizationId, 'hasOrg:', hasOrg, 'pathname:', pathname);
+
+    if (needsOrgCreation && pathname !== '/create-organization') {
+      hasGuardRun.current = true;
+      router.replace('/create-organization');
+      return;
     }
-  }, [user, router]);
+
+    // Redirigir roles que NO deberían estar aquí a sus dashboards específicos en vez de /dashboard para evitar bucles
+    if (!isSuper && !isAdminWithOrg) {
+      if (user.role === UserRole.EXTERNAL && pathname !== '/dashboard/external') {
+        hasGuardRun.current = true;
+        router.replace('/dashboard/external');
+        return;
+      }
+      if (user.role === UserRole.COLLABORATOR && pathname !== '/dashboard/academic') {
+        hasGuardRun.current = true;
+        router.replace('/dashboard/academic');
+        return;
+      }
+      // Si es algún rol desconocido, mandar al dashboard base solo una vez
+      if (pathname !== '/dashboard') {
+        hasGuardRun.current = true;
+        router.replace('/dashboard');
+        return;
+      }
+    }
+
+    // Si es válido (super o admin con org) no hacemos nada y dejamos cargar.
+    hasGuardRun.current = true;
+  }, [user, isLoading, router, pathname]);
 
   // Cargar todos los proyectos (superusuario ve todos)
+  const hasLoadedRef = (globalThis as any).__adminDashLoaded || { current: false };
+  (globalThis as any).__adminDashLoaded = hasLoadedRef;
+
   useEffect(() => {
     const loadAllProjects = async () => {
       if (!user) return;
@@ -101,7 +150,8 @@ export default function AdminDashboard() {
       }
     };
 
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
       loadAllProjects();
     }
   }, [isAuthenticated, user]);
@@ -109,9 +159,9 @@ export default function AdminDashboard() {
   // Calcular estadísticas
   useEffect(() => {
     const total = userProjects.length;
-    const active = userProjects.filter(p => p.projectStatus?.name === "En Progreso").length;
-    const completed = userProjects.filter(p => p.projectStatus?.name === "Completado").length;
-    const pending = userProjects.filter(p => p.projectStatus?.name === "Pendiente").length;
+    const active = userProjects.filter((p: Project) => p.projectStatus?.name === "En Progreso").length;
+    const completed = userProjects.filter((p: Project) => p.projectStatus?.name === "Completado").length;
+    const pending = userProjects.filter((p: Project) => p.projectStatus?.name === "Pendiente").length;
 
     setStats({
       totalProjects: total,
@@ -119,6 +169,57 @@ export default function AdminDashboard() {
       completedProjects: completed,
       pendingProjects: pending
     });
+  }, [userProjects]);
+
+  // Cargar cantidad de usuarios de la organización
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!user?.organizationId) return;
+      try {
+        setIsLoadingOrgUsers(true);
+        const users = await userService.getUsersByOrganization(user.organizationId);
+        setOrgUserCount(users?.length ?? 0);
+      } catch (e) {
+        console.warn('No se pudo cargar usuarios de la organización:', e);
+        setOrgUserCount(0);
+      } finally {
+        setIsLoadingOrgUsers(false);
+      }
+    };
+    loadUsers();
+  }, [user?.organizationId]);
+
+  // Distribución de roles por proyecto (agregado simple consultando cada proyecto)
+  useEffect(() => {
+    const loadRoleCounts = async () => {
+      if (!userProjects || userProjects.length === 0) {
+        setRoleCounts({});
+        return;
+      }
+      try {
+        setIsLoadingRoleCounts(true);
+        const counts: Record<string, number> = {};
+  const ids = userProjects.map((p: Project) => p.IDProject).filter(Boolean) as number[];
+        const results = await Promise.allSettled(ids.map((id) => projectService.getUsersInProject(id)));
+        results.forEach(r => {
+          if (r.status === 'fulfilled') {
+            (r.value as any[]).forEach((u: any) => {
+              const raw = (u?.role?.name ?? u?.roleName ?? u?.RoleName ?? u?.rolename ?? u?.name ?? '').toString();
+              const key = raw.trim().toLowerCase();
+              if (!key) return;
+              counts[key] = (counts[key] || 0) + 1;
+            });
+          }
+        });
+        setRoleCounts(counts);
+      } catch (e) {
+        console.warn('No se pudo calcular distribución de roles:', e);
+        setRoleCounts({});
+      } finally {
+        setIsLoadingRoleCounts(false);
+      }
+    };
+    loadRoleCounts();
   }, [userProjects]);
 
   // Abrir modal para crear nuevo proyecto
@@ -213,7 +314,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <SidebarProfile />
+      <SidebarProfile dashboardHref="/dashboard/admin" roleLabel={user.role === UserRole.ADMIN ? 'Administrador' : undefined} />
       <div className="flex-1 flex flex-col min-w-0">
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Bienvenida */}
@@ -222,12 +323,25 @@ export default function AdminDashboard() {
             ¡Bienvenido, {user.name}! 👑
           </h2>
           <p className="text-gray-600">
-            Panel de superusuario - Gestión completa de proyectos, fases y tareas.
+            {user.role === UserRole.ADMIN
+              ? 'Panel administrativo - Gestión de tu organización y proyectos.'
+              : 'Panel de superusuario - Gestión completa de proyectos, fases y tareas.'}
           </p>
         </div>
 
         {/* Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="text-2xl">👥</div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Usuarios Org</p>
+                <p className="text-2xl font-bold text-gray-900">{isLoadingOrgUsers || orgUserCount === null ? '—' : orgUserCount}</p>
+              </div>
+            </div>
+          </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -275,6 +389,26 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Distribución de Roles */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Distribución de Roles</h3>
+            {isLoadingRoleCounts && <span className="text-sm text-gray-500">Cargando…</span>}
+          </div>
+          {Object.keys(roleCounts).length === 0 ? (
+            <p className="text-gray-600">{isLoadingRoleCounts ? 'Calculando roles…' : 'Aún no hay roles asignados en los proyectos.'}</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {Object.entries(roleCounts).map(([role, count]) => (
+                <span key={role} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-sm">
+                  <span className="capitalize">{role}</span>
+                  <span className="font-semibold">{count}</span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Botón para crear proyecto */}
