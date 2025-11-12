@@ -83,10 +83,12 @@ class OrganizationService {
   }
 
   async updateOrganization(id: number, organization: Omit<Organization, 'IDOrganization'>): Promise<Organization> {
-    return this.request<Organization>(`/organizations/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(organization),
-    });
+      // Eliminar el campo users si existe
+      const { users, ...orgSinUsers } = organization;
+      return this.request<Organization>(`/organizations/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(orgSinUsers),
+      });
   }
 
   async deleteOrganization(id: number): Promise<void> {
