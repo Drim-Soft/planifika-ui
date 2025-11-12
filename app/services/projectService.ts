@@ -3,7 +3,7 @@ import { API_CONFIG_PROJECTS_PLANIFIKA, DEFAULT_API_HEADERS } from '../config/ap
 import { Project, Methodology, ProjectStatus, CreateProjectRequest, Role } from '@/app/types/project';
 
 class ProjectService {
-  // Reutilizamos la misma función de request que en authService
+  // Reutilizamos la misma función de request que en authService con soporte de reintentos
   
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}${endpoint}`;
@@ -24,8 +24,15 @@ class ProjectService {
     body: options.body
   });
 
-  try {
-    const response = await fetch(url, config);
+  const attempts = API_CONFIG_PROJECTS_PLANIFIKA.RETRY_ATTEMPTS || 1;
+  const delayMs = API_CONFIG_PROJECTS_PLANIFIKA.RETRY_DELAY || 1000;
+
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const started = Date.now();
+    try {
+      const response = await fetch(url, config);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -42,7 +49,7 @@ class ProjectService {
     }
 
     // 🔧 NUEVO manejo robusto para respuestas
-    if (response.status === 204) return {} as T;
+  if (response.status === 204) return {} as T;
 
     const text = await response.text();
     try {
@@ -50,20 +57,27 @@ class ProjectService {
     } catch {
       return text as unknown as T; // Si es texto plano (como "Project logically deleted")
     }
-
-  } catch (error) {
-    console.error('Error al conectar con Projects API:', error);
-
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error(`No se puede conectar con el servidor. Verifica que el backend esté en ${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}`);
+    } catch (error) {
+      lastError = error;
+      const elapsed = Date.now() - started;
+      const isTimeout = error instanceof Error && error.name === 'TimeoutError';
+      const isNetwork = error instanceof TypeError && error.message.includes('fetch');
+      console.warn(`⚠️ Intento ${attempt}/${attempts} fallido (${elapsed}ms):`, error);
+      if (attempt < attempts) {
+        await new Promise(r => setTimeout(r, delayMs * attempt)); // backoff simple
+        continue;
+      }
+      // Clasificación final de error
+      if (isNetwork) {
+        throw new Error(`No se puede conectar con el servidor de proyectos (${API_CONFIG_PROJECTS_PLANIFIKA.BASE_URL}). Verifica que esté levantado en el puerto correcto.`);
+      }
+      if (isTimeout) {
+        throw new Error(`Timeout tras ${API_CONFIG_PROJECTS_PLANIFIKA.TIMEOUT}ms al consultar proyectos. El backend está lento o inalcanzable.`);
+      }
+      throw error;
     }
-
-    if (error instanceof Error && error.name === 'TimeoutError') {
-      throw new Error('La solicitud tardó demasiado tiempo. El servidor puede estar sobrecargado o no disponible.');
-    }
-
-    throw error;
   }
+  throw lastError || new Error('Fallo desconocido en request de proyectos');
 }
   // =============================
   //  Endpoints del backend

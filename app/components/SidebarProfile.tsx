@@ -1,13 +1,16 @@
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import {ChevronLeft, ChevronRight, LogOut, UserCircle, Edit2, LifeBuoy, Plus, Calendar} from "lucide-react";
+import {ChevronLeft, ChevronRight, LogOut, UserCircle, Edit2, LifeBuoy, Plus, Calendar, Building2} from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { ticketService } from "../services/ticketService";
 import { TicketResponse } from "../types/ticket";
 import CreateTicketModal from "./CreateTicketModal";
 import TicketModal from "./TicketModal";
+import OrganizationModal from "./OrganizationModal";
+import { organizationService } from "../services/organizationService";
 import {UserRole} from "@/app/types/auth";
 
 type SidebarProfileProps = {
@@ -22,6 +25,7 @@ export default function SidebarProfile({
                                            dashboardHref = "/dashboard/external"
                                        }: SidebarProfileProps) {
     const { user, logout } = useAuth();
+    const router = useRouter();
     // Sanitizar URL de foto para evitar espacios iniciales que rompen Next Image
     const sanitizedPhotoUrl = (user?.photoUrl || '').trim();
     const [collapsed, setCollapsed] = useState(false);
@@ -32,6 +36,8 @@ export default function SidebarProfile({
     const [isLoadingTickets, setIsLoadingTickets] = useState(false);
     const [isCreatingTicket, setIsCreatingTicket] = useState(false);
     const [showTicketsList, setShowTicketsList] = useState(false);
+    const [showOrgModal, setShowOrgModal] = useState(false);
+    const [editingOrg, setEditingOrg] = useState<any>(null);
 
     // Determinar el label del rol dinámicamente
     const getUserRoleLabel = () => {
@@ -57,6 +63,7 @@ export default function SidebarProfile({
 
     // Determinar si mostrar "Editar Perfil" basado en el rol real
     const shouldShowEditProfile = !hideEdit && user?.role === UserRole.EXTERNAL;
+    const canEditOrganization = user?.role === UserRole.ADMIN && !!user?.organizationId;
 
     // Verificar si el usuario tiene acceso a tareas
     const hasTaskAccess = user?.role === UserRole.EXTERNAL || user?.role === UserRole.COLLABORATOR;
@@ -112,6 +119,42 @@ export default function SidebarProfile({
         setSelectedTicket(ticket);
         setShowTicketModal(true);
         setShowTicketsList(false);
+    };
+
+    // Organización: abrir modal para editar
+    const handleOpenOrganization = async () => {
+        if (!user?.organizationId) {
+            // Si el admin no tiene organización, enviar a crear
+            router.push('/create-organization');
+            return;
+        }
+        try {
+            const org = await organizationService.getOrganizationById(user.organizationId);
+            setEditingOrg({
+                IDOrganization: (org as any).IDOrganization ?? (org as any).id ?? user.organizationId,
+                nit: (org as any).nit ?? "",
+                name: (org as any).name ?? "",
+                address: (org as any).address ?? "",
+                phone: (org as any).phone ?? "",
+                photoURL: (org as any).photoURL ?? "",
+                domain: (org as any).domain ?? "",
+            });
+            setShowOrgModal(true);
+        } catch (e) {
+            console.error('Error cargando organización:', e);
+            alert('No se pudo cargar la organización');
+        }
+    };
+
+    const handleSaveOrganization = async (data: any) => {
+        if (!user?.organizationId) return;
+        try {
+            await organizationService.updateOrganization(user.organizationId, data);
+            setShowOrgModal(false);
+        } catch (e) {
+            console.error('Error actualizando organización:', e);
+            alert('Error al actualizar la organización');
+        }
     };
 
     return (
@@ -236,6 +279,17 @@ export default function SidebarProfile({
                     </Link>
                 )}
 
+                {/* Organización (solo Admin con organización) */}
+                {canEditOrganization && (
+                    <button
+                        onClick={handleOpenOrganization}
+                        className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[#FFD369]/10 text-gray-200 text-sm font-medium"
+                    >
+                        <Building2 className="w-5 h-5 text-[#FFD369]" />
+                        {!collapsed && <span>Organización</span>}
+                    </button>
+                )}
+
                 {/* Sección de Soporte */}
                 <div className="mt-4 pt-4 border-t border-gray-700">
                     <div className="flex items-center justify-between mb-2 px-3">
@@ -327,6 +381,14 @@ export default function SidebarProfile({
                 }}
                 ticket={selectedTicket}
             />
+            {showOrgModal && (
+                <OrganizationModal
+                    isOpen={showOrgModal}
+                    onClose={() => { setShowOrgModal(false); setEditingOrg(null); }}
+                    onSave={handleSaveOrganization}
+                    editingOrganization={editingOrg}
+                />
+            )}
         </aside>
     );
 }

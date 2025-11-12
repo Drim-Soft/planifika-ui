@@ -97,6 +97,8 @@ export function validateRole(role: UserRole): boolean {
 export function getDefaultRouteForRole(role: UserRole): string {
   switch (role) {
     case UserRole.ADMIN:
+      // Por defecto, admins sin organización irán a crear organización.
+      // Para admins con organización usa getDefaultRouteForUser.
       return '/create-organization';
     case UserRole.EXTERNAL:
       return '/dashboard/external';
@@ -136,3 +138,12 @@ export const hasAdminProjectRole = (role: unknown, realRoleId?: number): boolean
     return false;
   }
 };
+
+// Ruta por defecto basada en usuario completo (incluye organizationId)
+export function getDefaultRouteForUser(user: { role: UserRole; organizationId?: number | null }): string {
+  if (user.role === UserRole.ADMIN) {
+    const hasOrg = typeof user.organizationId === 'number' ? user.organizationId > 0 : !!user.organizationId;
+    return hasOrg ? '/dashboard/admin' : '/create-organization';
+  }
+  return getDefaultRouteForRole(user.role);
+}

@@ -20,10 +20,23 @@ export const API_CONFIG_PROJECTS_PLANIFIKA = {
   RETRY_DELAY: 1000,
 };
 // Headers por defecto para todas las peticiones API
-export const DEFAULT_API_HEADERS = {
-  'Content-Type': 'application/json',
-  'ngrok-skip-browser-warning': 'true', // Omite la advertencia de ngrok
-};
+// Evitar forzar el header de ngrok en local para no disparar preflights (OPTIONS)
+export const DEFAULT_API_HEADERS: Record<string, string> = (() => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+  const urls = [
+    process.env.NEXT_PUBLIC_API_USERS_PLANIFIKA_URL,
+    process.env.NEXT_PUBLIC_API_ORGANIZATIONS_URL,
+    process.env.NEXT_PUBLIC_API_PROJECTS_URL,
+  ];
+
+  const needsNgrokBypass = urls.some((u) => typeof u === 'string' && u.includes('ngrok'));
+  if (needsNgrokBypass) {
+    headers['ngrok-skip-browser-warning'] = 'true';
+  }
+
+  return headers;
+})();
 
 // Función para verificar si el backend está disponible
 export const checkBackendHealth = async (): Promise<boolean> => {

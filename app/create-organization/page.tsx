@@ -20,12 +20,19 @@ export default function CreateOrganization() {
 
   // Verificar autenticación y rol
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (authLoading) return;
+    if (!isAuthenticated) {
       router.push('/');
       return;
     }
-
-    if (user && user.role !== UserRole.ADMIN) {
+    if (!user) return;
+    // Si es admin y ya tiene organización, no debe estar aquí
+    if (user.role === UserRole.ADMIN && user.organizationId) {
+      router.push('/dashboard/admin');
+      return;
+    }
+    // Otros roles redirigidos fuera
+    if (user.role !== UserRole.ADMIN) {
       router.push('/dashboard');
       return;
     }
@@ -35,9 +42,9 @@ export default function CreateOrganization() {
     try {
       const newOrganization = await organizationService.createOrganization(organizationData);
       console.log("Organización creada:", newOrganization);
-      await userService.updateUserOrganization(user!.id, newOrganization?.id!);
-      // Redirigir al dashboard del administrador tras crear y asociar
-      router.push('/dashboard');
+  await userService.updateUserOrganization(user!.id, newOrganization?.id!);
+  // Redirigir directamente al dashboard administrativo para evitar hop intermedio
+  router.replace('/dashboard/admin');
     } catch (error) {
       console.error("Error al crear organización:", error);
       throw error;
