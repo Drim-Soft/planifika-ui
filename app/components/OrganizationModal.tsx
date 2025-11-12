@@ -196,9 +196,11 @@ export default function OrganizationModal({
                 type="text"
                 value={formData.nit}
                 onChange={(e) => setFormData({...formData, nit: e.target.value})}
-                className="planifika-input"
+                className={`planifika-input ${editingOrganization ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder="Ej: 860.123.456-7"
                 required
+                disabled={!!editingOrganization}
+                title={editingOrganization ? 'El NIT no se puede editar. Para cambiarlo, abre un ticket de soporte.' : undefined}
               />
             </div>
 
