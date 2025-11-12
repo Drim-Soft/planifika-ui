@@ -180,11 +180,11 @@ export default function ProjectDetailsModal({ project, onClose, user }: any) {
           {loadingPhases ? (
             <>
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex-1 min-w-[120px] text-center animate-pulse">
-                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto mb-2"></div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2"></div>
-                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-16 mx-auto mt-2"></div>
+                <div key={i} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex-1 min-w-[120px] text-center animate-pulse transition-colors">
+                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto mb-2 transition-colors"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto mb-2 transition-colors"></div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2 transition-colors"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-16 mx-auto mt-2 transition-colors"></div>
                 </div>
               ))}
             </>

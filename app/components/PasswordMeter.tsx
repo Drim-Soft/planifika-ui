@@ -63,12 +63,12 @@ export default function PasswordMeter({ password }: PasswordMeterProps) {
   }, [password]);
 
   return (
-    <div className="mt-3 space-y-3">
+    <div className="mt-3 space-y-3 transition-colors">
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Nivel de seguridad</span>
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-400 transition-colors">Nivel de seguridad</span>
           {password && (
-            <span className={`text-xs font-bold ${
+            <span className={`text-xs font-bold transition-colors ${
               analysis.score <= 1 ? "text-red-600 dark:text-red-400" :
               analysis.score === 2 ? "text-orange-600 dark:text-orange-400" :
               analysis.score === 3 ? "text-yellow-600 dark:text-yellow-400" :
@@ -79,7 +79,7 @@ export default function PasswordMeter({ password }: PasswordMeterProps) {
             </span>
           )}
         </div>
-        <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner border border-gray-300 dark:border-gray-600">
+        <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner border border-gray-300 dark:border-gray-600 transition-colors">
           <div
             className={`h-full transition-all duration-500 ease-out ${analysis.color} shadow-sm rounded-full`}
             style={{ width: `${analysis.percentage}%`, minWidth: password ? '4px' : '0' }}
@@ -96,13 +96,13 @@ export default function PasswordMeter({ password }: PasswordMeterProps) {
             { check: analysis.checks.numbers, label: "Al menos un número" },
             { check: analysis.checks.symbols, label: "Al menos un símbolo (!@#$%...)" },
           ].map((req, idx) => (
-            <div key={idx} className="flex items-center gap-2 text-xs">
+            <div key={idx} className="flex items-center gap-2 text-xs transition-colors">
               {req.check ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 flex-shrink-0 transition-colors" />
               ) : (
-                <XCircle className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                <XCircle className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0 transition-colors" />
               )}
-              <span className={req.check ? "text-green-700 dark:text-green-300 font-medium" : "text-gray-500 dark:text-gray-400"}>
+              <span className={`transition-colors ${req.check ? "text-green-700 dark:text-green-300 font-medium" : "text-gray-500 dark:text-gray-400"}`}>
                 {req.label}
               </span>
             </div>
