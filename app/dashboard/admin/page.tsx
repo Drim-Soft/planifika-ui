@@ -47,52 +47,35 @@ export default function AdminDashboard() {
   }, [isAuthenticated, isLoading, router]);
 
   // Guard de acceso: permitir SUPERUSER siempre; permitir ADMIN solo si tiene organización.
-  // Evitar loops usando pathname y router.replace (no añade al historial).
   const pathname = usePathname();
-  // Guard más estable: esperar a que termine carga y no saltar al dashboard genérico.
-  const hasGuardRun = useRef(false);
-  useEffect(() => {
-    if (hasGuardRun.current) return; // correr una sola vez para evitar ruido en StrictMode
-    if (isLoading) return; // esperar a carga inicial
-    if (!user) return; // aún sin usuario
+  const isSuper = user?.role === UserRole.SUPERUSER;
+  const hasOrg = typeof user?.organizationId === 'number' ? user?.organizationId > 0 : !!user?.organizationId;
+  const isAdmin = user?.role === UserRole.ADMIN;
+  const isAdminWithOrg = isAdmin && hasOrg;
+  const needsOrgCreation = isAdmin && !hasOrg;
 
-    const isSuper = user.role === UserRole.SUPERUSER;
-    const hasOrg = typeof user.organizationId === 'number' ? user.organizationId > 0 : !!user.organizationId;
-    const isAdmin = user.role === UserRole.ADMIN;
-    const isAdminWithOrg = isAdmin && hasOrg;
-    const needsOrgCreation = isAdmin && !hasOrg;
+  // Si es ADMIN sin organización, dirigir a la página local de "No tienes plan"
+  if (!isLoading && isAuthenticated && needsOrgCreation) {
+    router.replace('/create-organization');
+    return null;
+  }
 
-    console.log('[admin guard] role:', user.role, 'organizationId:', user.organizationId, 'hasOrg:', hasOrg, 'pathname:', pathname);
-
-    if (needsOrgCreation && pathname !== '/create-organization') {
-      hasGuardRun.current = true;
-      router.replace('/create-organization');
-      return;
+  // Redirigir roles que NO deberían estar aquí a sus dashboards específicos en vez de /dashboard para evitar bucles
+  if (!isLoading && isAuthenticated && user && !isSuper && !isAdminWithOrg) {
+    if (user.role === UserRole.EXTERNAL && pathname !== '/dashboard/external') {
+      router.replace('/dashboard/external');
+      return null;
     }
-
-    // Redirigir roles que NO deberían estar aquí a sus dashboards específicos en vez de /dashboard para evitar bucles
-    if (!isSuper && !isAdminWithOrg) {
-      if (user.role === UserRole.EXTERNAL && pathname !== '/dashboard/external') {
-        hasGuardRun.current = true;
-        router.replace('/dashboard/external');
-        return;
-      }
-      if (user.role === UserRole.COLLABORATOR && pathname !== '/dashboard/academic') {
-        hasGuardRun.current = true;
-        router.replace('/dashboard/academic');
-        return;
-      }
-      // Si es algún rol desconocido, mandar al dashboard base solo una vez
-      if (pathname !== '/dashboard') {
-        hasGuardRun.current = true;
-        router.replace('/dashboard');
-        return;
-      }
+    if (user.role === UserRole.COLLABORATOR && pathname !== '/dashboard/academic') {
+      router.replace('/dashboard/academic');
+      return null;
     }
-
-    // Si es válido (super o admin con org) no hacemos nada y dejamos cargar.
-    hasGuardRun.current = true;
-  }, [user, isLoading, router, pathname]);
+    // Si es algún rol desconocido, mandar al dashboard base solo una vez
+    if (pathname !== '/dashboard') {
+      router.replace('/dashboard');
+      return null;
+    }
+  }
 
   // Cargar todos los proyectos (superusuario ve todos)
   const hasLoadedRef = (globalThis as any).__adminDashLoaded || { current: false };
@@ -178,7 +161,7 @@ export default function AdminDashboard() {
       if (!user?.organizationId) return;
       try {
         setIsLoadingOrgUsers(true);
-        const users = await userService.getUsersByOrganization(user.organizationId);
+        const users = await organizationService.getUsersByOrganization(user.organizationId);
         setOrgUserCount(users?.length ?? 0);
       } catch (e) {
         console.warn('No se pudo cargar usuarios de la organización:', e);
