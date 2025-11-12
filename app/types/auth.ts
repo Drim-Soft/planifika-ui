@@ -5,6 +5,7 @@ export interface SignupRequest {
   password: string;
   photoUrl?: string;
   role: UserRole;
+  organizationId?: number;
 }
 
 export interface SignupResponse {
