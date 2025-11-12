@@ -66,9 +66,9 @@ export default function TasksPage() {
     if (isLoading) {
         return (
             <ProtectedRoute>
-                <div className="flex h-screen">
+                <div className="h-screen">
                     <SidebarProfile /> {/* SIDEBAR */}
-                    <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 flex flex-col overflow-hidden ml-64">
                         <main className="flex-1 overflow-auto bg-gray-50 p-6">
                             <div className="min-h-[60vh] flex items-center justify-center">
                                 <LoadingSpinner size="lg" text="Cargando tareas..." />
@@ -82,10 +82,10 @@ export default function TasksPage() {
 
     return (
         <ProtectedRoute>
-            <div className="flex h-screen"> {/* ESTRUCTURA CON SIDEBAR */}
+            <div className="h-screen"> {/* ESTRUCTURA CON SIDEBAR */}
                 <SidebarProfile /> {/* SIDEBAR */}
 
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col overflow-hidden ml-64">
                     <main className="flex-1 overflow-auto bg-gray-50 p-6"> {/* ← bg-gray-50 AQUÍ */}
                         <div className="max-w-7xl mx-auto">
                             {/* Header */}

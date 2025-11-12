@@ -49,8 +49,121 @@
   --color-project-cancelled: var(--project-cancelled);
 }
 
+/* Dark mode styles */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+}
+
+.dark body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.dark .planifika-card {
+  @apply bg-gray-800 border-gray-700 text-gray-100;
+}
+
+.dark .planifika-input {
+  @apply bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500;
+}
+
+.dark .planifika-button-primary {
+  @apply bg-yellow-500 hover:bg-yellow-600 text-gray-900;
+}
+
+.dark .bg-white {
+  @apply bg-gray-800;
+}
+
+.dark .text-gray-800,
+.dark .text-gray-900 {
+  @apply text-gray-100;
+}
+
+.dark .text-gray-700 {
+  @apply text-gray-300;
+}
+
+.dark .text-gray-600 {
+  @apply text-gray-400;
+}
+
+.dark .border-gray-200,
+.dark .border-gray-300 {
+  @apply border-gray-700;
+}
+
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+  @apply bg-gray-800;
+}
+
+.dark .bg-yellow-50 {
+  @apply bg-yellow-900/20;
+}
+
+.dark .bg-blue-50 {
+  @apply bg-blue-900/20;
+}
+
+.dark .bg-green-50 {
+  @apply bg-green-900/20;
+}
+
+.dark .bg-red-50 {
+  @apply bg-red-900/20;
+}
+
+/* Contornos para componentes en modo oscuro */
+.dark * {
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+.dark .planifika-card,
+.dark .planifika-input,
+.dark button,
+.dark input,
+.dark select,
+.dark textarea,
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+  @apply border border-gray-700;
+}
+
+.dark .rounded,
+.dark .rounded-lg,
+.dark .rounded-md,
+.dark .rounded-xl,
+.dark .rounded-2xl {
+  @apply border border-gray-700;
+}
+
+/* Contornos específicos para elementos interactivos */
+.dark button:not(.no-border),
+.dark a:not(.no-border),
+.dark input:not(.no-border),
+.dark select:not(.no-border),
+.dark textarea:not(.no-border) {
+  @apply border border-gray-700;
+}
+
+/* Mantener contornos en elementos con fondo */
+.dark .bg-gray-800,
+.dark .bg-gray-700,
+.dark .bg-gray-900 {
+  @apply border border-gray-600;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --background: #0a0a0a;
     --foreground: #ededed;
     --bg-primary: #0f172a;
@@ -123,4 +236,14 @@ body {
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Ajuste para sidebar fijo */
+.sidebar-content {
+  margin-left: 16rem; /* 64 * 4 = 256px = w-64 */
+  transition: margin-left 0.3s duration-300;
+}
+
+.sidebar-content.collapsed {
+  margin-left: 4rem; /* 16 * 4 = 64px = w-16 */
 }
