@@ -158,7 +158,7 @@ export default function SidebarProfile({
     };
 
     return (
-        <aside className={`bg-gradient-to-b from-[#222831] to-[#1a1f26] text-white transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'} h-screen sticky top-0 flex-shrink-0 flex flex-col shadow-2xl z-30`}>
+        <aside className={`bg-gradient-to-b from-[#222831] to-[#1a1f26] text-white transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'} h-screen fixed left-0 top-0 flex-shrink-0 flex flex-col shadow-2xl z-30`}>
             {/* Header con foto y nombre */}
             <div className="p-4 border-b border-gray-700 flex items-center justify-between">
                 <div className="flex items-center gap-3">

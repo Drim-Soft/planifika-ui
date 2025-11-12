@@ -11,6 +11,8 @@ import { getRoleFromUrlParam, getRoleLabel, getRoleDescription, validateRole } f
 import { useFormValidation } from "../../hooks/useFormValidation";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { getFriendlySignupErrorMessage } from "../../utils/errorMessages";
+import ImageReCaptcha from "../../components/ImageReCaptcha";
+import PasswordMeter from "../../components/PasswordMeter";
 
 function SignUpContent() {
   const searchParams = useSearchParams();
@@ -27,6 +29,7 @@ function SignUpContent() {
   });
 
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
   
   // Configurar reglas de validación
   const validationRules = {
@@ -98,6 +101,10 @@ function SignUpContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isCaptchaVerified) {
+      return;
+    }
     
     if (!validateForm(formData) || !userRole) {
       return;
@@ -295,6 +302,7 @@ function SignUpContent() {
                         🔒
                       </div>
                     </div>
+                    <PasswordMeter password={formData.password} />
                     {errors.password && (
                       <p className="text-red-500 text-xs mt-1">{errors.password}</p>
                     )}
@@ -386,12 +394,14 @@ function SignUpContent() {
                     </>
                   )}
 
+                  <ImageReCaptcha onVerify={setIsCaptchaVerified} className="mt-4" />
+
                   {/* Botón de registro */}
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !isCaptchaVerified}
                     className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm ${
-                      isLoading 
+                      isLoading || !isCaptchaVerified
                         ? 'bg-gray-400 cursor-not-allowed text-white' 
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}

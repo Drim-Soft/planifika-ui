@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useAuth } from "../../contexts/AuthContext";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { getFriendlyErrorMessage } from "../../utils/errorMessages";
+import ImageReCaptcha from "../../components/ImageReCaptcha";
+import Toggle from "../../components/Toggle";
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +18,7 @@ export default function StudentLogin() {
     rememberMe: false
   });
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -30,6 +33,11 @@ export default function StudentLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+
+    if (!isCaptchaVerified) {
+      setLocalError("Por favor completa la verificación de seguridad");
+      return;
+    }
 
     try {
       await externalLogin({
@@ -122,19 +130,11 @@ export default function StudentLogin() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
-                />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
-                  Recordarme
-                </label>
-              </div>
+              <Toggle
+                checked={formData.rememberMe}
+                onChange={(checked) => setFormData(prev => ({ ...prev, rememberMe: checked }))}
+                label="Recordarme"
+              />
               <Link 
                 href="#" 
                 className="text-sm text-yellow-600 hover:text-yellow-700 font-medium"
@@ -143,9 +143,11 @@ export default function StudentLogin() {
               </Link>
             </div>
 
+            <ImageReCaptcha onVerify={setIsCaptchaVerified} className="mt-4" />
+
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !isCaptchaVerified}
               className="w-full planifika-button-primary text-base py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isLoading ? (
