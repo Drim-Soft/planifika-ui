@@ -13,6 +13,7 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 import { getFriendlySignupErrorMessage } from "../../utils/errorMessages";
 import ImageReCaptcha from "../../components/ImageReCaptcha";
 import PasswordMeter from "../../components/PasswordMeter";
+import PasswordInput from "../../components/PasswordInput";
 
 function SignUpContent() {
   const searchParams = useSearchParams();
@@ -285,23 +286,18 @@ function SignUpContent() {
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                       Contraseña
                     </label>
-                    <div className="relative">
-                      <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
-                          errors.password ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
-                        }`}
-                        placeholder="••••••••"
-                        required
-                      />
-                      <div className="absolute right-2 top-2 text-gray-400 text-sm">
-                        🔒
-                      </div>
-                    </div>
+                    <PasswordInput
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
+                        errors.password ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                      }`}
+                      placeholder="••••••••"
+                      required
+                      error={errors.password}
+                    />
                     <PasswordMeter password={formData.password} />
                     {errors.password && (
                       <p className="text-red-500 text-xs mt-1">{errors.password}</p>
@@ -313,23 +309,18 @@ function SignUpContent() {
                     <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                       Confirmar Contraseña
                     </label>
-                    <div className="relative">
-                      <input
-                        type="password"
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
-                          errors.confirmPassword ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
-                        }`}
-                        placeholder="••••••••"
-                        required
-                      />
-                      <div className="absolute right-2 top-2 text-gray-400 text-sm">
-                        🔒
-                      </div>
-                    </div>
+                    <PasswordInput
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border-b-2 focus:outline-none bg-transparent text-sm text-black ${
+                        errors.confirmPassword ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                      }`}
+                      placeholder="••••••••"
+                      required
+                      error={errors.confirmPassword}
+                    />
                     {errors.confirmPassword && (
                       <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
                     )}

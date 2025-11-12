@@ -7,6 +7,7 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 import { getFriendlyErrorMessage } from "../../utils/errorMessages";
 import ImageReCaptcha from "../../components/ImageReCaptcha";
 import Toggle from "../../components/Toggle";
+import PasswordInput from "../../components/PasswordInput";
 
 export const dynamic = 'force-dynamic';
 
@@ -115,8 +116,7 @@ export default function StudentLogin() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Contraseña
               </label>
-              <input
-                type="password"
+              <PasswordInput
                 id="password"
                 name="password"
                 value={formData.password}

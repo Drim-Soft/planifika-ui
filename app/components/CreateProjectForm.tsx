@@ -391,7 +391,7 @@ export default function CreateProjectForm({ user, onCreated, onClose }: Props) {
           <button
             type="submit"
             disabled={isLoading}
-            className="flex-1 planifika-button-primary text-lg py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="flex-1 planifika-button-primary text-lg py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
           >
             {isLoading ? (
               <div className="flex items-center justify-center">

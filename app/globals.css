@@ -121,15 +121,10 @@
   @apply bg-red-900/20;
 }
 
-/* Contornos para componentes en modo oscuro */
-.dark * {
-  border-color: rgba(75, 85, 99, 0.5);
-}
-
+/* Contornos para componentes en modo oscuro - EXCLUYENDO botones del sidebar */
 .dark .planifika-card,
 .dark .planifika-input,
-.dark button,
-.dark input,
+.dark input:not(button),
 .dark select,
 .dark textarea,
 .dark .bg-white,
@@ -138,20 +133,11 @@
   @apply border border-gray-700;
 }
 
-.dark .rounded,
-.dark .rounded-lg,
-.dark .rounded-md,
-.dark .rounded-xl,
-.dark .rounded-2xl {
-  @apply border border-gray-700;
-}
-
-/* Contornos específicos para elementos interactivos */
-.dark button:not(.no-border),
-.dark a:not(.no-border),
-.dark input:not(.no-border),
-.dark select:not(.no-border),
-.dark textarea:not(.no-border) {
+.dark .rounded:not(button),
+.dark .rounded-lg:not(button),
+.dark .rounded-md:not(button),
+.dark .rounded-xl:not(button),
+.dark .rounded-2xl:not(button) {
   @apply border border-gray-700;
 }
 
@@ -160,6 +146,14 @@
 .dark .bg-gray-700,
 .dark .bg-gray-900 {
   @apply border border-gray-600;
+}
+
+/* Excluir botones del sidebar de contornos */
+.dark aside button,
+.dark aside nav button,
+.dark aside nav a {
+  border: none !important;
+  outline: none !important;
 }
 
 @media (prefers-color-scheme: dark) {

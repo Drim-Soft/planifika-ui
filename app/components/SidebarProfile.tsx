@@ -277,7 +277,7 @@ export default function SidebarProfile({
                 </div>
                 <button
                     onClick={() => setCollapsed((c) => !c)}
-                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors duration-200 border-none outline-none"
                     title={collapsed ? "Expandir" : "Comprimir"}
                 >
                     {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -311,7 +311,7 @@ export default function SidebarProfile({
                 {canEditOrganization && (
                     <button
                         onClick={handleOpenOrganization}
-                        className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[#FFD369]/10 text-gray-200 text-sm font-medium"
+                        className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[#FFD369]/10 text-gray-200 text-sm font-medium border-none outline-none"
                     >
                         <Building2 className="w-5 h-5 text-[#FFD369]" />
                         {!collapsed && <span>Organización</span>}
@@ -322,7 +322,7 @@ export default function SidebarProfile({
                 {isAdminWithOrg && (
                         <button
                             onClick={() => router.push('/dashboard/people')}
-                            className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[#FFD369]/10 text-gray-200 text-sm font-medium relative"
+                            className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[#FFD369]/10 text-gray-200 text-sm font-medium relative border-none outline-none"
                         >
                             <Users className="w-5 h-5 text-[#FFD369]" />
                             {!collapsed && (
@@ -342,7 +342,7 @@ export default function SidebarProfile({
                         {!collapsed && <p className="text-xs text-gray-400 font-semibold uppercase">Soporte</p>}
                         <button
                             onClick={() => setShowCreateTicketModal(true)}
-                            className="p-1.5 hover:bg-[#FFD369]/10 rounded-lg transition-colors"
+                            className="p-1.5 hover:bg-[#FFD369]/10 rounded-lg transition-colors border-none outline-none"
                             title="Crear ticket"
                         >
                             <Plus className="w-4 h-4 text-[#FFD369]" />
@@ -352,7 +352,7 @@ export default function SidebarProfile({
                     {/* Botón de tickets */}
                     <button
                         onClick={() => setShowTicketsList(!showTicketsList)}
-                        className="w-full flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[#FFD369]/10 text-gray-200 text-sm font-medium relative"
+                        className="w-full flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[#FFD369]/10 text-gray-200 text-sm font-medium relative border-none outline-none"
                     >
                         <LifeBuoy className="w-5 h-5 text-[#FFD369]" />
                         {!collapsed && (
@@ -379,7 +379,7 @@ export default function SidebarProfile({
                                     <button
                                         key={ticket.idTickets}
                                         onClick={() => handleViewTicket(ticket)}
-                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#FFD369]/5 transition-colors group"
+                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#FFD369]/5 transition-colors group border-none outline-none"
                                     >
                                         <div className="flex items-start gap-2">
                                             <span className="text-xs text-gray-400">#{ticket.idTickets}</span>
@@ -404,7 +404,7 @@ export default function SidebarProfile({
             <div className="p-4 border-t border-gray-700">
                 <button
                     onClick={logout}
-                    className="flex items-center gap-3 p-2 w-full text-gray-300 hover:bg-gray-700 hover:text-white rounded-xl transition-all duration-200 group"
+                    className="flex items-center gap-3 p-2 w-full text-gray-300 hover:bg-gray-700 hover:text-white rounded-xl transition-all duration-200 group border-none outline-none"
                 >
                     <LogOut className="w-5 h-5 text-gray-400 group-hover:text-red-400" />
                     {!collapsed && <span className="font-medium">Cerrar Sesión</span>}

@@ -178,10 +178,16 @@ export default function ProjectDetailsModal({ project, onClose, user }: any) {
         {/* Lista de fases */}
         <div className="flex flex-wrap gap-3">
           {loadingPhases ? (
-            <div className="w-full text-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600 mx-auto mb-2"></div>
-              <p className="text-sm text-gray-500">Cargando fases...</p>
-            </div>
+            <>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex-1 min-w-[120px] text-center animate-pulse">
+                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto mb-2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto mb-2"></div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-16 mx-auto mt-2"></div>
+                </div>
+              ))}
+            </>
           ) : phases.length === 0 ? (
             <div className="w-full text-center py-8 text-gray-500">
               <p>No hay fases creadas para este proyecto</p>
