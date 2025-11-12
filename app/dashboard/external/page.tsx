@@ -12,6 +12,7 @@ import CreateProjectForm from "../../components/CreateProjectForm";
 import ProjectDetailsModal from "../../components/ProjectDetailsModal";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 import ProjectEditModal from "../academic/components/ProjectEditModal";
+import Pagination from "../../components/Pagination";
 
 export default function ExternalDashboard() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -34,6 +35,14 @@ export default function ExternalDashboard() {
     completedProjects: 0,
     pendingTasks: 0
   });
+
+  // Estados para paginación de "Mis Proyectos"
+  const [currentPage, setCurrentPage] = useState(1);
+  const [projectsPerPage] = useState(6); // 6 proyectos por página (2 filas de 3)
+  
+  // Estados para paginación de "Proyectos Disponibles" en el modal
+  const [joinCurrentPage, setJoinCurrentPage] = useState(1);
+  const [joinProjectsPerPage] = useState(9); // 9 proyectos por página en el modal (3 filas de 3)
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -522,15 +531,24 @@ export default function ExternalDashboard() {
                 {isLoadingAllProjects ? (
                   <div className="text-center py-8 text-gray-500">Cargando proyectos disponibles...</div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {allProjects
-                      .filter(p => !userProjects.some(up => up.IDProject === p.IDProject))
-                      .filter(p => p.projectStatus?.name?.toLowerCase() !== "eliminado")
-                      .filter(project =>
-                        project.name &&
-                        project.name.toLowerCase().includes(joinSearchTerm.trim().toLowerCase())
-                      )
-                      .map((project) => (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {(() => {
+                        // Filtrar proyectos disponibles
+                        const availableProjects = allProjects
+                          .filter(p => !userProjects.some(up => up.IDProject === p.IDProject))
+                          .filter(p => p.projectStatus?.name?.toLowerCase() !== "eliminado")
+                          .filter(project =>
+                            project.name &&
+                            project.name.toLowerCase().includes(joinSearchTerm.trim().toLowerCase())
+                          );
+                        
+                        // Calcular índices de paginación para el modal
+                        const indexOfLastJoinProject = joinCurrentPage * joinProjectsPerPage;
+                        const indexOfFirstJoinProject = indexOfLastJoinProject - joinProjectsPerPage;
+                        const currentJoinProjects = availableProjects.slice(indexOfFirstJoinProject, indexOfLastJoinProject);
+                        
+                        return currentJoinProjects.map((project) => (
                         <div key={project.IDProject} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
                           <div className="p-6">
                             <div className="flex justify-between items-start mb-4">
@@ -604,8 +622,30 @@ export default function ExternalDashboard() {
                             </div>
                           </div>
                         </div>
-                      ))}
-                  </div>
+                      ));
+                      })()}
+                    </div>
+                    
+                    {/* Paginación para Proyectos Disponibles en el Modal */}
+                    {(() => {
+                      const availableProjects = allProjects
+                        .filter(p => !userProjects.some(up => up.IDProject === p.IDProject))
+                        .filter(p => p.projectStatus?.name?.toLowerCase() !== "eliminado")
+                        .filter(project =>
+                          project.name &&
+                          project.name.toLowerCase().includes(joinSearchTerm.trim().toLowerCase())
+                        );
+                      const totalJoinPages = Math.ceil(availableProjects.length / joinProjectsPerPage);
+                      
+                      return (
+                        <Pagination
+                          currentPage={joinCurrentPage}
+                          totalPages={totalJoinPages}
+                          onPageChange={(page) => setJoinCurrentPage(page)}
+                        />
+                      );
+                    })()}
+                  </>
                 )}
               </div>
             </div>
@@ -644,12 +684,19 @@ export default function ExternalDashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {userProjects
-              .filter(project =>
+            {(() => {
+              // Filtrar proyectos
+              const filteredProjects = userProjects.filter(project =>
                 project.name &&
                 project.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
-              )
-              .map((project) => (
+              );
+              
+              // Calcular índices de paginación
+              const indexOfLastProject = currentPage * projectsPerPage;
+              const indexOfFirstProject = indexOfLastProject - projectsPerPage;
+              const currentProjects = filteredProjects.slice(indexOfFirstProject, indexOfLastProject);
+              
+              return currentProjects.map((project) => (
               <div key={project.IDProject} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
                 <div className="p-6">
                   {/* Header de la tarjeta */}
@@ -742,8 +789,26 @@ export default function ExternalDashboard() {
                   </div>
                 </div>
               </div>
-            ))}
+            ));
+            })()}
           </div>
+
+          {/* Paginación para Mis Proyectos */}
+          {(() => {
+            const filteredProjects = userProjects.filter(project =>
+              project.name &&
+              project.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+            );
+            const totalPages = Math.ceil(filteredProjects.length / projectsPerPage);
+            
+            return (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
+            );
+          })()}
         </div>
         {/* Modales de Proyecto */}
         {selectedProject && (
